@@ -3,15 +3,16 @@
 ## Prerequisites
 - Docker Desktop (or Docker Engine + Compose plugin)
 - GNU Make (optional, if using Makefile helpers)
+- Python 3.11+ and Node 20+ (only if running without Docker)
 
-## Local setup
+## Local setup (Docker Compose - recommended)
 1. Copy environment template:
    ```bash
    cp .env.example .env
    ```
 2. Build and start the stack:
    ```bash
-   docker compose up --build
+   docker compose up --build -d
    ```
 3. Run database migrations:
    ```bash
@@ -23,9 +24,44 @@
    ```
 5. Open the UI: `http://localhost:5173`
 
+### Same flow with Makefile shortcuts
+```bash
+cp .env.example .env
+make up
+make migrate
+make seed
+```
+
+## Local setup (without Docker)
+Use this when you want native local processes instead of containers.
+
+1. Copy environment template:
+   ```bash
+   cp .env.example .env
+   ```
+2. Ensure PostgreSQL is running and update `DATABASE_URL` in `.env` if needed.
+3. Backend setup:
+   ```bash
+   cd backend
+   python -m venv .venv
+   source .venv/bin/activate
+   pip install -r requirements.txt
+   alembic upgrade head
+   python scripts_seed.py
+   uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+   ```
+4. Frontend setup (new terminal):
+   ```bash
+   cd frontend
+   npm ci
+   npm run dev -- --host 0.0.0.0 --port 5173
+   ```
+
 ## Runtime URLs
 - Frontend: `http://localhost:5173`
 - Backend API: `http://localhost:8000/api/v1`
+- API docs (Swagger): `http://localhost:8000/docs`
+- API docs (ReDoc): `http://localhost:8000/redoc`
 - Health: `http://localhost:8000/api/v1/health`
 - Version: `http://localhost:8000/api/v1/version`
 
@@ -40,7 +76,7 @@ docker compose exec backend python scripts_seed.py
 ## Common commands
 - Start/restart:
   ```bash
-  docker compose up --build
+  docker compose up --build -d
   ```
 - Stop:
   ```bash
@@ -52,7 +88,7 @@ docker compose exec backend python scripts_seed.py
   ```
 - Run backend tests:
   ```bash
-  cd backend && pytest
+  cd backend && python -m pytest
   ```
 - Build frontend:
   ```bash

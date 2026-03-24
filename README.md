@@ -31,13 +31,38 @@ Production-oriented MVP for an internal Product/Vendor workspace.
 - Frontend API base URL env support, auth-expiry handling, improved loading/submission/error states.
 
 ## Quick Start (Local)
-See `docs/setup.md` for full instructions.
+See `docs/setup.md` for full instructions and troubleshooting.
 
+### Option A (recommended): Docker Compose
 ```bash
 cp .env.example .env
-docker compose up --build
+docker compose up --build -d
 docker compose exec backend alembic upgrade head
 docker compose exec backend python scripts_seed.py
+```
+
+Then open:
+- Frontend: `http://localhost:5173`
+- API docs: `http://localhost:8000/docs`
+- Health: `http://localhost:8000/api/v1/health`
+
+### Option B: Run services directly (without Docker)
+```bash
+cp .env.example .env
+
+# terminal 1 (backend)
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+alembic upgrade head
+python scripts_seed.py
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+# terminal 2 (frontend)
+cd frontend
+npm ci
+npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
 ## Deployment

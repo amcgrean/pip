@@ -31,6 +31,9 @@ A baseline `render.yaml` is included at repo root.
 - `MAX_ATTACHMENT_SIZE_BYTES=10485760`
 - `MAX_IMPORT_SIZE_BYTES=5242880`
 - `ALLOWED_ATTACHMENT_EXTENSIONS=.pdf,.png,.jpg,.jpeg,.csv,.txt,.doc,.docx,.xlsx`
+- `SEED_ADMIN_EMAIL` (required only for first-time seed run)
+- `SEED_ADMIN_PASSWORD` (required only for first-time seed run)
+- `SEED_ADMIN_FULL_NAME` (optional; defaults to Internal Admin)
 
 ## 3) Frontend settings
 ### Build/publish
@@ -46,6 +49,8 @@ After first backend deploy, run once from a Render shell:
 alembic upgrade head
 python scripts_seed.py
 ```
+
+If you prefer no shell access, run the same two commands in a one-off Render job tied to the backend service.
 
 ## 5) Smoke checks
 - `GET /api/v1/health` returns `status: ok`
