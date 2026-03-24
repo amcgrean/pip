@@ -17,7 +17,16 @@ def _create_vendor(client, auth_headers, vendor_code: str, vendor_name: str):
     return response.json()
 
 
-def _add_mapping(client, auth_headers, vendor_id: int, product_id: int, vendor_sku: str, vendor_description: str, is_primary: bool = True):
+def _add_mapping(
+    client,
+    auth_headers,
+    vendor_id: int,
+    product_id: int,
+    vendor_sku: str,
+    vendor_description: str,
+    is_primary: bool = True,
+    vendor_uom: str | None = None,
+):
     response = client.post(
         "/api/v1/mappings/",
         json={
@@ -25,6 +34,7 @@ def _add_mapping(client, auth_headers, vendor_id: int, product_id: int, vendor_s
             "product_id": product_id,
             "vendor_sku": vendor_sku,
             "vendor_description": vendor_description,
+            "vendor_uom": vendor_uom,
             "is_primary": is_primary,
         },
         headers=auth_headers,
@@ -66,7 +76,7 @@ def test_product_match_exact_vendor_sku(client, auth_headers):
         {"internal_sku": "SKU-VENDOR-1", "normalized_name": "Vendor Board", "status": "active"},
     )
     vendor = _create_vendor(client, auth_headers, "VEND-A", "Vendor A")
-    _add_mapping(client, auth_headers, vendor["id"], product["id"], "VN-001-A", "Vendor A board")
+    _add_mapping(client, auth_headers, vendor["id"], product["id"], "VN-001-A", "Vendor A board", vendor_uom="EA")
 
     response = client.post(
         "/api/v1/products/match",
@@ -78,7 +88,24 @@ def test_product_match_exact_vendor_sku(client, auth_headers):
     assert top["product_id"] == product["id"]
     assert top["confidence"] == "high"
     assert top["matched_vendor_sku"] == "VN-001-A"
+    assert top["matched_vendor_uom"] == "EA"
     assert "exact vendor_sku match" in top["match_reasons"]
+
+
+def test_product_match_vendor_uom_signal(client, auth_headers):
+    product = _create_product(
+        client,
+        auth_headers,
+        {"internal_sku": "SKU-UOM-1", "normalized_name": "Vendor UOM Product", "status": "active"},
+    )
+    vendor = _create_vendor(client, auth_headers, "UOM-A", "Unit Vendor")
+    _add_mapping(client, auth_headers, vendor["id"], product["id"], "UOM-100", "bundle board", vendor_uom="BUNDLE")
+
+    response = client.post("/api/v1/products/match", json={"query_text": "bundle"}, headers=auth_headers)
+    assert response.status_code == 200
+    top = response.json()["matches"][0]
+    assert top["product_id"] == product["id"]
+    assert top["matched_vendor_uom"] == "BUNDLE"
 
 
 def test_product_match_alias_signal(client, auth_headers):
