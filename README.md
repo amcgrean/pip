@@ -1,85 +1,41 @@
-# Beisser Internal Operations Platform (Foundation)
+# Beisser Internal Operations Platform (Foundation + MVP Module)
 
-A reusable internal web-application foundation for Beisser Lumber operational workflows. This base project is designed for long-term module growth (products, vendors, imports, dashboards, attachments, review workflows), not a one-off prototype.
+This repository now includes the first production-ready internal module: **Internal Product / Vendor Data Workspace**.
 
 ## Stack
+- Backend: FastAPI, SQLAlchemy, Alembic, Pydantic
+- Frontend: React + Vite + TypeScript + Material UI
+- Database: PostgreSQL
 
-- **Backend:** Python 3.12, FastAPI, SQLAlchemy, Alembic, Pydantic
-- **Frontend:** React, Vite, TypeScript, Material UI
-- **Database:** PostgreSQL
-- **Dev/Deploy:** Docker, Docker Compose
-- **Auth (MVP):** JWT bearer auth with role-based user model (`admin`, `standard`)
+## Implemented MVP Scope
+- Product list with server-backed pagination, search, and filters.
+- Product detail with core info, vendor mappings, attachments, and notes.
+- Product create/edit APIs.
+- Vendor list + create/edit APIs and UI basics.
+- Vendor mapping create/update with single-primary behavior per product.
+- Product notes add/list with type + timestamp.
+- Product attachments upload/list/download with local file storage abstraction.
+- CSV import workflow (upload, parse, trim, required column validation, upsert, row-level errors, job history).
+- Dashboard summary cards and quick links.
 
-## Project Purpose
+## CSV Import Columns
+Required:
+- `internal_sku`
+- `normalized_name`
+- `vendor_code`
+- `vendor_sku`
 
-This app provides business-friendly operational layers on top of ERP data/processes that are difficult to use directly for:
+Supported optional columns:
+- `product_type`, `category_major`, `category_minor`, `species_or_material`, `grade`
+- `thickness`, `width`, `length`, `unit_of_measure`, `description`, `status`
+- `vendor_description`, `vendor_uom`, `last_cost`
 
-- internal product/vendor data workspace
-- vendor mapping and cross-reference workflows
-- import tracking and review
-- attachment/note-enabled operational support
-- future branch-specific internal dashboards
+## Local file storage behavior (development)
+- Attachments are stored under `local_storage_dir` (default: `./data_storage`).
+- Storage implementation is abstracted behind a storage service for future cloud object storage swap.
 
-## Local Setup (Docker)
+## Deferred
+- SSO, advanced authorization, ERP sync, background queues, OCR/extraction, advanced analytics, notifications, cloud object storage.
 
-1. Copy environment template:
-   ```bash
-   cp .env.example .env
-   ```
-2. Start all services:
-   ```bash
-   docker compose up --build
-   ```
-3. Run migrations:
-   ```bash
-   docker compose exec backend alembic upgrade head
-   ```
-4. Seed admin/sample data:
-   ```bash
-   docker compose exec backend python scripts_seed.py
-   ```
-
-## Dev URLs
-
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8000/api/v1
-- Health endpoint: http://localhost:8000/api/v1/health
-
-## Seed Login (Development)
-
-- Email: `admin@beisser-internal.local`
-- Password: `ChangeMe123!`
-
-> Change this immediately in non-local environments.
-
-## Migrations
-
-- Create migration (inside backend container):
-  ```bash
-  docker compose exec backend alembic revision --autogenerate -m "message"
-  ```
-- Apply migration:
-  ```bash
-  docker compose exec backend alembic upgrade head
-  ```
-
-## Docker Notes
-
-- `db` runs Postgres 16
-- `backend` runs FastAPI + autoreload
-- `frontend` runs Vite dev server
-
-## Deployment Notes (Railway / Render)
-
-- Both platforms support this stack well with managed PostgreSQL.
-- For production:
-  - build frontend static assets and serve via CDN or edge/static host
-  - run backend as long-running web service
-  - inject secrets and DB URL from platform env vars
-  - rotate `SECRET_KEY` and seed/admin credentials
-
-## Documentation
-
-- Architecture: [`docs/architecture.md`](docs/architecture.md)
-- Setup + troubleshooting: [`docs/setup.md`](docs/setup.md)
-- Step implementation summary: [`docs/implementation-summary.md`](docs/implementation-summary.md)
+## Setup
+Follow `docs/setup.md` for Docker-based setup.

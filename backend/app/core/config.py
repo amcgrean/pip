@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg2://beisser:beisser@db:5432/beisser_ops"
 
     frontend_origin: str = "http://localhost:5173"
+    local_storage_dir: str = "./data_storage"
 
     seed_admin_email: str = "admin@beisser-internal.com"
     seed_admin_password: str = "ChangeMe123!"
