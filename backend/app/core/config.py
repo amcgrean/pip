@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     frontend_origin: str = "http://localhost:5173"
 
-    seed_admin_email: str = "admin@beisser-internal.local"
+    seed_admin_email: str = "admin@beisser-internal.com"
     seed_admin_password: str = "ChangeMe123!"
     seed_admin_full_name: str = "Internal Admin"
 
