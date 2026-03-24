@@ -1,21 +1,29 @@
-# Step 1 Implementation Summary
+# Production Readiness Pass Summary
 
-## Completed in this step
+## Hardened in this pass
+- Environment and secret config validation added.
+- CORS moved to explicit origin allowlist env var.
+- Request logging + validation error consistency.
+- Startup storage directory checks.
+- Health endpoint now checks DB; new version endpoint added.
+- Attachments hardened (type/size checks, filename sanitization, safe path resolution).
+- CSV import hardened (upload limits, blank-row handling, safer numeric parsing errors).
+- Frontend auth/session handling improved for token expiry and invalid token cleanup.
+- Frontend forms/pages improved with loading/submission feedback and clearer errors.
+- Render deployment scaffolding added (`render.yaml`) and docs synced to implemented state.
 
-- Full monorepo-style scaffold for backend/frontend/docs.
-- FastAPI backend foundation with config, DB session, router modules, JWT auth, protected route example, and health endpoint.
-- Initial SQLAlchemy model set for users/vendors/products/mappings/attachments/notes/import-jobs.
-- Alembic initialized with initial migration.
-- Seed script for admin user + sample LBM vendors/products.
-- React + Vite + TypeScript frontend shell with login, protected routing, app layout, navigation, and placeholder module pages.
-- Dockerfiles and docker-compose-based local runtime with PostgreSQL.
-- Setup and architecture documentation.
+## Test coverage expanded
+Backend tests now include:
+- login success/failure
+- protected route auth requirement
+- health endpoint
+- product CRUD + filter behavior
+- vendor mapping creation + single-primary behavior
+- CSV import happy path, missing-column failure, blank-row handling
+- attachment metadata creation + file-type validation
 
-## Intentionally deferred to next step
-
-- full CRUD and validation for each domain entity
-- advanced role/permission enforcement beyond base auth
-- upload pipeline implementation for attachment storage
-- import processor logic (parsing, row-level validation, error reporting)
-- dashboard widgets and operational analytics
-- automated test suite and CI pipeline setup
+## Deferred (intentional)
+- SSO / advanced permissions
+- cloud object storage migration
+- async/background import jobs
+- ERP sync and advanced analytics

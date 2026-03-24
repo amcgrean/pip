@@ -1,41 +1,53 @@
-# Beisser Internal Operations Platform (Foundation + MVP Module)
+# Beisser Internal Operations Platform
 
-This repository now includes the first production-ready internal module: **Internal Product / Vendor Data Workspace**.
+Production-oriented MVP for an internal Product/Vendor workspace.
 
 ## Stack
-- Backend: FastAPI, SQLAlchemy, Alembic, Pydantic
-- Frontend: React + Vite + TypeScript + Material UI
+- Backend: FastAPI, SQLAlchemy, Alembic, Pydantic Settings
+- Frontend: React + Vite + TypeScript + MUI
 - Database: PostgreSQL
+- Deployment target: Render (backend web service + frontend static site + managed PostgreSQL)
 
 ## Implemented MVP Scope
-- Product list with server-backed pagination, search, and filters.
-- Product detail with core info, vendor mappings, attachments, and notes.
-- Product create/edit APIs.
-- Vendor list + create/edit APIs and UI basics.
-- Vendor mapping create/update with single-primary behavior per product.
-- Product notes add/list with type + timestamp.
-- Product attachments upload/list/download with local file storage abstraction.
-- CSV import workflow (upload, parse, trim, required column validation, upsert, row-level errors, job history).
-- Dashboard summary cards and quick links.
+- JWT login (`/auth/login`) + protected API routes.
+- Product list/detail + create/update APIs with server-side filtering/pagination.
+- Vendor list/create/update APIs.
+- Vendor product mappings with single-primary enforcement per product.
+- Product notes add/list.
+- Product attachments upload/list/download with local storage abstraction.
+- CSV imports for product+mapping upserts with import job history and row-level error logs.
+- Dashboard summary cards.
 
-## CSV Import Columns
-Required:
-- `internal_sku`
-- `normalized_name`
-- `vendor_code`
-- `vendor_sku`
+## Production Hardening Included
+- Environment-driven runtime config with validation for required/safe values.
+- Production-safe backend start command (no hot reload by default).
+- CORS configured from comma-separated env var (`CORS_ALLOWED_ORIGINS`).
+- Request logging middleware, structured validation errors, startup storage checks.
+- Health and version endpoints (`/health`, `/version`).
+- Attachment upload hardening (extension allowlist, max size, sanitized and unique file names, path-safe download).
+- CSV import hardening (max upload size, file type check, blank-row handling, clearer numeric validation errors).
+- Frontend API base URL env support, auth-expiry handling, improved loading/submission/error states.
 
-Supported optional columns:
-- `product_type`, `category_major`, `category_minor`, `species_or_material`, `grade`
-- `thickness`, `width`, `length`, `unit_of_measure`, `description`, `status`
-- `vendor_description`, `vendor_uom`, `last_cost`
+## Quick Start (Local)
+See `docs/setup.md` for full instructions.
 
-## Local file storage behavior (development)
-- Attachments are stored under `local_storage_dir` (default: `./data_storage`).
-- Storage implementation is abstracted behind a storage service for future cloud object storage swap.
+```bash
+cp .env.example .env
+docker compose up --build
+docker compose exec backend alembic upgrade head
+docker compose exec backend python scripts_seed.py
+```
 
-## Deferred
-- SSO, advanced authorization, ERP sync, background queues, OCR/extraction, advanced analytics, notifications, cloud object storage.
+## Deployment
+See `docs/deployment-render.md` for Render-specific steps and required environment variables.
 
-## Setup
-Follow `docs/setup.md` for Docker-based setup.
+## Known MVP Limitations
+- Attachment storage is local filesystem-based (good for MVP/internal usage; not yet cloud object storage).
+- No SSO or advanced role model yet.
+- No background job queue for large imports.
+
+## Deferred (post-launch)
+- SSO and stronger IAM model
+- Object storage migration (S3/R2/etc.)
+- Background workers + retryable asynchronous import pipeline
+- External ERP integrations

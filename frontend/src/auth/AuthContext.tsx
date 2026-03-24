@@ -35,11 +35,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false))
   }, [])
 
+  useEffect(() => {
+    const handler = () => {
+      localStorage.removeItem('access_token')
+      setUser(null)
+    }
+    window.addEventListener('auth:unauthorized', handler)
+    return () => window.removeEventListener('auth:unauthorized', handler)
+  }, [])
+
   const login = async (email: string, password: string) => {
-    const response = await api.post('/auth/login', { email, password })
-    localStorage.setItem('access_token', response.data.access_token)
-    const me = await api.get('/auth/me')
-    setUser(me.data)
+    try {
+      const response = await api.post('/auth/login', { email, password })
+      localStorage.setItem('access_token', response.data.access_token)
+      const me = await api.get('/auth/me')
+      setUser(me.data)
+    } catch (error) {
+      localStorage.removeItem('access_token')
+      throw error
+    }
   }
 
   const logout = () => {

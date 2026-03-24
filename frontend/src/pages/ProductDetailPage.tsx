@@ -10,13 +10,20 @@ export function ProductDetailPage() {
   const [noteType, setNoteType] = useState('general')
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [submittingNote, setSubmittingNote] = useState(false)
+  const [uploading, setUploading] = useState(false)
 
   const load = async () => {
     try {
+      setLoading(true)
+      setError(null)
       const res = await api.get(`/products/${productId}`)
       setData(res.data)
     } catch {
       setError('Failed to load product detail')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -25,21 +32,35 @@ export function ProductDetailPage() {
   }, [productId])
 
   const addNote = async () => {
-    await api.post(`/notes/product/${productId}`, { note_text: noteText, note_type: noteType })
-    setNoteText('')
-    await load()
+    try {
+      setSubmittingNote(true)
+      await api.post(`/notes/product/${productId}`, { note_text: noteText, note_type: noteType })
+      setNoteText('')
+      await load()
+    } catch {
+      setError('Unable to add note')
+    } finally {
+      setSubmittingNote(false)
+    }
   }
 
   const uploadAttachment = async () => {
     if (!file) return
-    const formData = new FormData()
-    formData.append('file', file)
-    await api.post(`/attachments/product/${productId}`, formData)
-    setFile(null)
-    await load()
+    try {
+      setUploading(true)
+      const formData = new FormData()
+      formData.append('file', file)
+      await api.post(`/attachments/product/${productId}`, formData)
+      setFile(null)
+      await load()
+    } catch {
+      setError('Unable to upload attachment')
+    } finally {
+      setUploading(false)
+    }
   }
 
-  if (!data) return <Typography>Loading...</Typography>
+  if (loading && !data) return <Typography>Loading...</Typography>
 
   return (
     <Stack spacing={2}>
@@ -62,7 +83,7 @@ export function ProductDetailPage() {
         <Typography variant="h6" gutterBottom>Attachments</Typography>
         <Stack direction="row" spacing={1}>
           <input type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} />
-          <Button variant="contained" onClick={() => void uploadAttachment()}>Upload</Button>
+          <Button variant="contained" disabled={!file || uploading} onClick={() => void uploadAttachment()}>{uploading ? 'Uploading...' : 'Upload'}</Button>
         </Stack>
         <Table size="small"><TableHead><TableRow><TableCell>Name</TableCell><TableCell /></TableRow></TableHead>
           <TableBody>{data.attachments.map((a: any) => <TableRow key={a.id}><TableCell>{a.file_name}</TableCell><TableCell><Button href={`${api.defaults.baseURL}${a.download_url}`} target="_blank">Open</Button></TableCell></TableRow>)}</TableBody></Table>
@@ -73,7 +94,7 @@ export function ProductDetailPage() {
         <Stack direction="row" spacing={1} mb={2}>
           <TextField size="small" label="Type" value={noteType} onChange={(e) => setNoteType(e.target.value)} />
           <TextField size="small" fullWidth label="Add note" value={noteText} onChange={(e) => setNoteText(e.target.value)} />
-          <Button variant="contained" onClick={() => void addNote()}>Add</Button>
+          <Button variant="contained" disabled={submittingNote || !noteText.trim()} onClick={() => void addNote()}>{submittingNote ? 'Adding...' : 'Add'}</Button>
         </Stack>
         {data.notes.map((n: any) => (
           <Box key={n.id} mb={1} p={1} sx={{ border: '1px solid #ddd', borderRadius: 1 }}>

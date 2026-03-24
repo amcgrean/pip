@@ -6,8 +6,8 @@ import { useAuth } from '../auth/AuthContext'
 export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
-  const [email, setEmail] = useState('admin@beisser-internal.local')
-  const [password, setPassword] = useState('ChangeMe123!')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 

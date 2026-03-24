@@ -1,7 +1,9 @@
 import os
 
 os.environ['DATABASE_URL'] = 'sqlite:///./test.db'
-os.environ['SECRET_KEY'] = 'test-secret'
+os.environ['SECRET_KEY'] = 'test-secret-key-12345'
+os.environ['CORS_ALLOWED_ORIGINS'] = 'http://localhost:5173'
+os.environ['ENVIRONMENT'] = 'test'
 
 import pytest
 from fastapi.testclient import TestClient
@@ -16,6 +18,13 @@ from app.models.user import User
 
 engine = create_engine('sqlite:///./test.db', connect_args={'check_same_thread': False})
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+
+@pytest.fixture(scope='session', autouse=True)
+def cleanup_test_db():
+    yield
+    if os.path.exists('test.db'):
+        os.remove('test.db')
 
 
 @pytest.fixture(autouse=True)
