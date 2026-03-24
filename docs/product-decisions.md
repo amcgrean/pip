@@ -16,3 +16,7 @@ The same patterns can be reused for request/bid tools, warehouse utility modules
 - operational list/detail pages
 - upload + parse + reconcile flows
 - lightweight audit history
+
+## Future data domains (deferred)
+- `product_relationships`: add a typed bridge table once relationship types and business rules are finalized.
+- `inventory_by_location`: add once location master/source-of-truth and sync expectations are settled.

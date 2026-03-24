@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 
 from pydantic import BaseModel, Field
@@ -49,6 +49,26 @@ class ProductBase(BaseModel):
     status: str = "active"
     branch_scope: str | None = None
 
+    canonical_name: str | None = None
+    display_name: str | None = None
+    extended_description: str | None = None
+    category: str | None = None
+    subcategory: str | None = None
+    finish: str | None = None
+    treatment: str | None = None
+    profile: str | None = None
+    thickness_numeric: float | None = None
+    width_numeric: float | None = None
+    length_numeric: float | None = None
+    keywords: str | None = None
+    search_text: str | None = None
+    master_search_text: str | None = None
+    last_sold_date: date | None = None
+    is_active: bool = True
+    is_stock_item: bool = False
+    match_priority: int | None = None
+    source_system_id: str | None = None
+
 
 class ProductCreate(ProductBase):
     pass
@@ -69,6 +89,26 @@ class ProductUpdate(BaseModel):
     description: str | None = None
     status: str | None = None
     branch_scope: str | None = None
+
+    canonical_name: str | None = None
+    display_name: str | None = None
+    extended_description: str | None = None
+    category: str | None = None
+    subcategory: str | None = None
+    finish: str | None = None
+    treatment: str | None = None
+    profile: str | None = None
+    thickness_numeric: float | None = None
+    width_numeric: float | None = None
+    length_numeric: float | None = None
+    keywords: str | None = None
+    search_text: str | None = None
+    master_search_text: str | None = None
+    last_sold_date: date | None = None
+    is_active: bool | None = None
+    is_stock_item: bool | None = None
+    match_priority: int | None = None
+    source_system_id: str | None = None
 
 
 class ProductOut(ProductBase):
@@ -151,6 +191,54 @@ class ProductAttachmentOut(BaseModel):
         from_attributes = True
 
 
+class ProductAliasOut(BaseModel):
+    id: int
+    product_id: int
+    alias_text: str
+    alias_type: str | None
+    is_preferred: bool
+    source: str | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProductImageOut(BaseModel):
+    id: int
+    product_id: int
+    storage_path: str
+    image_type: str | None
+    alt_text: str | None
+    sort_order: int
+    source: str | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ProductDocumentOut(BaseModel):
+    id: int
+    product_id: int
+    document_type: str
+    title: str
+    file_url: str | None
+    attachment_id: int | None
+    source: str | None
+    effective_date: date | None
+    notes: str | None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ImportJobOut(BaseModel):
     id: int
     source_type: str
@@ -187,6 +275,9 @@ class ProductDetailOut(BaseModel):
     mappings: list[VendorMappingOut]
     attachments: list[ProductAttachmentOut]
     notes: list[ProductNoteOut]
+    aliases: list[ProductAliasOut]
+    images: list[ProductImageOut]
+    documents: list[ProductDocumentOut]
 
 
 class DashboardSummary(BaseModel):
