@@ -46,6 +46,7 @@ def _score_mapping(
     vendor_code = normalize_text(mapping.vendor.vendor_code if mapping.vendor else "")
     mapping_vendor_sku = normalize_text(mapping.vendor_sku)
     mapping_vendor_desc = normalize_text(mapping.vendor_description)
+    mapping_vendor_uom = normalize_text(mapping.vendor_uom)
 
     if normalized_vendor_sku and mapping_vendor_sku == normalized_vendor_sku:
         score += 140
@@ -74,6 +75,9 @@ def _score_mapping(
     if normalized_query_text and mapping_vendor_desc and normalized_query_text in mapping_vendor_desc:
         score += 25
         reasons.append("query contained in vendor_description")
+    if normalized_query_text and mapping_vendor_uom and normalized_query_text == mapping_vendor_uom:
+        score += 18
+        reasons.append("exact vendor_uom match")
 
     if query_tokens and mapping_vendor_desc:
         overlap = len(query_tokens & tokenize(mapping_vendor_desc))
@@ -81,6 +85,12 @@ def _score_mapping(
             token_points = min(overlap * 4, 20)
             score += token_points
             reasons.append(f"vendor_description token overlap ({overlap})")
+    if query_tokens and mapping_vendor_uom:
+        overlap = len(query_tokens & tokenize(mapping_vendor_uom))
+        if overlap:
+            token_points = min(overlap * 2, 6)
+            score += token_points
+            reasons.append(f"vendor_uom token overlap ({overlap})")
 
     if mapping.is_primary:
         score += 5
@@ -198,6 +208,7 @@ def _score_product(
         matched_vendor_code=mapping.vendor.vendor_code if mapping and mapping.vendor else None,
         matched_vendor_sku=mapping.vendor_sku if mapping else None,
         matched_vendor_description=mapping.vendor_description if mapping else None,
+        matched_vendor_uom=mapping.vendor_uom if mapping else None,
         is_primary_vendor_mapping=mapping.is_primary if mapping else None,
     )
 
@@ -235,6 +246,7 @@ def match_products(db: Session, payload: ProductMatchRequest) -> ProductMatchRes
                 ProductAlias.alias_text.ilike(term),
                 VendorProductMapping.vendor_sku.ilike(term),
                 VendorProductMapping.vendor_description.ilike(term),
+                VendorProductMapping.vendor_uom.ilike(term),
             ]
         )
     if normalized_vendor_name:

@@ -310,6 +310,7 @@ class ProductMatchResult(BaseModel):
     matched_vendor_code: str | None = None
     matched_vendor_sku: str | None = None
     matched_vendor_description: str | None = None
+    matched_vendor_uom: str | None = None
     is_primary_vendor_mapping: bool | None = None
 
 

@@ -32,6 +32,7 @@
 - Vendor signals are first-class:
   - exact `vendor_sku` matches are one of the highest-weight rules
   - vendor name/code alignment boosts mapping-linked products
+  - vendor UOM can provide a light relevance signal for ambiguous text
   - best matching vendor mapping metadata is returned with the result
 - Match responses include:
   - product identity/display fields

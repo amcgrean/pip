@@ -30,6 +30,7 @@
 - Matching is intentionally deterministic and rules-based for MVP stability and auditability.
 - Matching runs in a service layer and returns explicit `match_reasons` rather than opaque scoring.
 - Vendor identity (`vendor_name`, `vendor_code`) and `vendor_sku` are top-tier matching signals.
+- Vendor mapping fields (description/UOM) are lower-weight contextual signals used to break ties and improve noisy text lookup.
 - Confidence is bucketed from explicit score thresholds:
   - `high` for strongest exact/vendor-aware hits
   - `medium` for meaningful but less exact text overlap
