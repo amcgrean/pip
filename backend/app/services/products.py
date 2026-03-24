@@ -2,6 +2,7 @@ from sqlalchemy import asc, desc, func, or_
 from sqlalchemy.orm import Session
 
 from app.models.product import Product
+from app.models.product_alias import ProductAlias
 from app.models.product_attachment import ProductAttachment
 from app.models.vendor_product_mapping import VendorProductMapping
 from app.schemas.domain import ProductCreate, ProductUpdate
@@ -34,13 +35,20 @@ def list_products(
     query = db.query(Product)
     if vendor_id:
         query = query.join(VendorProductMapping).filter(VendorProductMapping.vendor_id == vendor_id)
-    if search:
-        term = f"%{search.strip()}%"
+    search_term = (search or "").strip()
+    if search_term:
+        term = f"%{search_term}%"
         query = query.filter(
             or_(
                 Product.internal_sku.ilike(term),
                 Product.normalized_name.ilike(term),
                 Product.description.ilike(term),
+                Product.canonical_name.ilike(term),
+                Product.display_name.ilike(term),
+                Product.keywords.ilike(term),
+                Product.search_text.ilike(term),
+                Product.master_search_text.ilike(term),
+                Product.aliases.any(ProductAlias.alias_text.ilike(term)),
             )
         )
     if category_major:
