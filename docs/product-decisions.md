@@ -26,6 +26,21 @@
   - `product_aliases.alias_text` (via `EXISTS`)
 - Alias matching is implemented with `EXISTS` semantics (not a broad join) to prevent duplicate product rows and keep pagination/counts correct.
 
+## Product matching behavior
+- Matching is intentionally deterministic and rules-based for MVP stability and auditability.
+- Matching runs in a service layer and returns explicit `match_reasons` rather than opaque scoring.
+- Vendor identity (`vendor_name`, `vendor_code`) and `vendor_sku` are top-tier matching signals.
+- Confidence is bucketed from explicit score thresholds:
+  - `high` for strongest exact/vendor-aware hits
+  - `medium` for meaningful but less exact text overlap
+  - `low` for weak partial/token-only hits
+- No ML/LLM/embeddings are used in MVP matching.
+
+## Matching limitations (current)
+- Substring and token-overlap heuristics may still miss heavily abbreviated/typo-heavy text.
+- No cross-line OCR context yet (line-level reconciliation workflows are future work).
+- No learning-to-rank feedback loop; scoring weights are static and code-configured.
+
 ## Why this supports future modules
 The same patterns can be reused for request/bid tools, warehouse utility modules, and review workflows that need:
 - operational list/detail pages

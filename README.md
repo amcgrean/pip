@@ -12,6 +12,7 @@ Production-oriented MVP for an internal Product/Vendor workspace.
 - JWT login (`/auth/login`) + protected API routes.
 - Product list/detail + create/update APIs with server-side filtering/pagination.
 - Product search supports case-insensitive matching across SKU, normalized/enriched names, descriptions, keywords, search text, master search text, and alias text.
+- Product matching endpoint (`POST /api/v1/products/match`) for OCR-like messy lookup with deterministic scoring across product fields, aliases, and vendor mappings (vendor name/code/SKU aware).
 - Vendor list/create/update APIs.
 - Vendor product mappings with single-primary enforcement per product.
 - Product notes add/list.
@@ -46,6 +47,7 @@ See `docs/deployment-render.md` for Render-specific steps and required environme
 - Attachment storage is local filesystem-based (good for MVP/internal usage; not yet cloud object storage).
 - No SSO or advanced role model yet.
 - No background job queue for large imports.
+- Product matching is deterministic/rules-based (no semantic embeddings or ML ranking).
 
 ## Deferred (post-launch)
 - SSO and stronger IAM model
