@@ -1,21 +1,36 @@
 # Architecture Overview
 
 ## Module boundaries
-- Routes: thin transport layer in `backend/app/routes/*`.
-- Services: business logic in `backend/app/services/*`.
-- Models: SQLAlchemy domain entities in `backend/app/models/*`.
-- Schemas: API contracts in `backend/app/schemas/domain.py`.
+- `backend/app/routes/*`: HTTP transport + request/response shaping.
+- `backend/app/services/*`: domain logic and workflow orchestration.
+- `backend/app/models/*`: SQLAlchemy entities.
+- `backend/app/schemas/*`: API contracts.
+- `frontend/src/pages/*`: feature screens.
+- `frontend/src/api/client.ts`: centralized API client + auth/session interception.
 
-## Implemented module
-The Product/Vendor workspace implements reusable patterns for future operational modules:
-- list/search/filter/pagination APIs
-- detail-oriented aggregate endpoints
-- CSV import job persistence + summary reporting
-- file attachment handling with storage abstraction
-- note/history capture for audit-friendly records
+## Request flow
+1. Request enters FastAPI route.
+2. Route resolves auth (`get_current_user`) and DB session dependency.
+3. Service layer performs business logic.
+4. Route returns typed response schema.
 
-## Attachment storage
-Current implementation uses a local filesystem storage service (`LocalStorageService`), with interfaces kept small to support a future cloud provider implementation.
+## Configuration model
+- All runtime settings are environment-driven (`backend/app/core/config.py`).
+- Settings include validation (environment, log level, secret length, file-size limits).
+- CORS is configured through `CORS_ALLOWED_ORIGINS` (comma-separated).
 
-## CSV import design
-The import service processes each row independently to avoid whole-file failures and records row-level failures in `import_jobs.error_log`.
+## Storage design (attachments)
+- Current storage provider: local filesystem (`LocalStorageService`).
+- Stored file names are sanitized and uniquified.
+- DB stores a relative path; download resolution enforces root-bound path safety.
+- This provider is intentionally simple to support a future object-storage swap.
+
+## Import design
+- CSV imports are synchronous MVP workflows.
+- Required header validation, per-row parse/validation, row-level error capture.
+- Blank rows are skipped.
+- Import job table tracks totals, status, and error snippets.
+
+## Operational endpoints
+- `GET /api/v1/health`: app + DB connectivity status.
+- `GET /api/v1/version`: build/version metadata.

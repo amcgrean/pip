@@ -8,3 +8,7 @@ dist/
 .coverage
 .pytest_cache/
 .DS_Store
+backend/test.db
+backend/data_storage/
+data_storage/
+frontend/dist/

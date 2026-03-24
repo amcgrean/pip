@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.domain import ImportJobListResponse, ImportJobOut, ImportSummary, PaginationMeta
@@ -18,7 +19,18 @@ def list_import_jobs(page: int = 1, page_size: int = 20, db: Session = Depends(g
 
 @router.post("/products-csv", response_model=ImportSummary)
 def upload_products_csv(file: UploadFile = File(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    suffix = (file.filename or "").lower().strip()
+    if not suffix.endswith(".csv"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only .csv files are supported")
+
     content = file.file.read()
+    if len(content) == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded CSV is empty")
+    if len(content) > settings.max_import_size_bytes:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"CSV exceeds max size of {settings.max_import_size_bytes} bytes",
+        )
     job = import_service.process_product_csv_import(db, file.filename or "upload.csv", content, user.id)
     return ImportSummary(
         id=job.id,

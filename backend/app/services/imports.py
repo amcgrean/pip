@@ -28,6 +28,19 @@ def _clean_row(row: dict[str, str]) -> dict[str, str]:
     return clean
 
 
+def _is_blank_row(row: dict[str, str]) -> bool:
+    return not any(value.strip() for value in row.values())
+
+
+def _parse_decimal(value: str | None, field_name: str) -> Decimal | None:
+    if not value:
+        return None
+    try:
+        return Decimal(value)
+    except Exception as exc:  # noqa: BLE001
+        raise ValueError(f"Invalid {field_name} value: {value}") from exc
+
+
 def process_product_csv_import(db: Session, file_name: str, content: bytes, user_id: int):
     job = ImportJob(source_type="product_csv", file_name=file_name, status="processing", created_by=user_id)
     db.add(job)
@@ -57,6 +70,8 @@ def process_product_csv_import(db: Session, file_name: str, content: bytes, user
 
     for index, raw_row in enumerate(reader, start=2):
         row = _clean_row(raw_row)
+        if _is_blank_row(row):
+            continue
         job.total_rows += 1
         try:
             sku = row.get("internal_sku", "")
@@ -109,7 +124,7 @@ def process_product_csv_import(db: Session, file_name: str, content: bytes, user
             mapping_values = {
                 "vendor_description": row.get("vendor_description") or None,
                 "vendor_uom": row.get("vendor_uom") or None,
-                "last_cost": Decimal(row["last_cost"]) if row.get("last_cost") else None,
+                "last_cost": _parse_decimal(row.get("last_cost"), "last_cost"),
             }
             if mapping:
                 for key, value in mapping_values.items():

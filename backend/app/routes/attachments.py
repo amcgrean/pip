@@ -9,6 +9,7 @@ from app.models.product_attachment import ProductAttachment
 from app.models.user import User
 from app.schemas.domain import ProductAttachmentOut
 from app.services import attachments as attachment_service
+from app.services.storage import storage_service
 from app.utils.deps import get_current_user
 
 router = APIRouter(prefix="/attachments", tags=["attachments"])
@@ -36,6 +37,12 @@ def download_attachment(attachment_id: int, db: Session = Depends(get_db), _: Us
     row = db.query(ProductAttachment).filter(ProductAttachment.id == attachment_id).first()
     if not row:
         raise HTTPException(status_code=404, detail="Attachment not found")
-    if not Path(row.file_path).exists():
+
+    candidate = Path(row.file_path)
+    file_path = candidate if candidate.is_absolute() else (storage_service.root / candidate)
+    resolved = file_path.resolve()
+    if not str(resolved).startswith(str(storage_service.root)):
+        raise HTTPException(status_code=400, detail="Invalid attachment path")
+    if not resolved.exists():
         raise HTTPException(status_code=404, detail="Attachment file not found")
-    return FileResponse(path=row.file_path, filename=row.file_name)
+    return FileResponse(path=str(resolved), filename=row.file_name)

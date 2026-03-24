@@ -1,65 +1,89 @@
 # Setup & Operations Guide
 
-## First-time setup
+## Prerequisites
+- Docker Desktop (or Docker Engine + Compose plugin)
+- GNU Make (optional, if using Makefile helpers)
 
-1. Ensure Docker Desktop (or Docker Engine + Compose plugin) is installed.
-2. Copy env template:
+## Local setup
+1. Copy environment template:
    ```bash
    cp .env.example .env
    ```
-3. Build and start services:
+2. Build and start the stack:
    ```bash
    docker compose up --build
    ```
-4. In another shell, run migrations:
+3. Run database migrations:
    ```bash
    docker compose exec backend alembic upgrade head
    ```
-5. Seed baseline data:
+4. Seed admin/demo data:
    ```bash
    docker compose exec backend python scripts_seed.py
    ```
-6. Open frontend: http://localhost:5173
+5. Open the UI: `http://localhost:5173`
+
+## Runtime URLs
+- Frontend: `http://localhost:5173`
+- Backend API: `http://localhost:8000/api/v1`
+- Health: `http://localhost:8000/api/v1/health`
+- Version: `http://localhost:8000/api/v1/version`
+
+## Fresh DB reset
+```bash
+docker compose down -v
+docker compose up --build -d
+docker compose exec backend alembic upgrade head
+docker compose exec backend python scripts_seed.py
+```
 
 ## Common commands
-
-- Start stack:
+- Start/restart:
   ```bash
   docker compose up --build
   ```
-- Stop stack:
+- Stop:
   ```bash
   docker compose down
   ```
-- Follow logs:
+- Logs:
   ```bash
   docker compose logs -f backend frontend db
   ```
-- Run migration:
+- Run backend tests:
   ```bash
-  docker compose exec backend alembic upgrade head
+  cd backend && pytest
   ```
-- Seed data:
+- Build frontend:
   ```bash
-  docker compose exec backend python scripts_seed.py
+  cd frontend && npm ci && npm run build
   ```
+
+## Important configuration variables
+- `DATABASE_URL`
+- `SECRET_KEY`
+- `ACCESS_TOKEN_EXPIRE_MINUTES`
+- `CORS_ALLOWED_ORIGINS`
+- `LOCAL_STORAGE_DIR`
+- `MAX_ATTACHMENT_SIZE_BYTES`
+- `MAX_IMPORT_SIZE_BYTES`
+- `VITE_API_BASE_URL`
 
 ## Troubleshooting
-
 ### Backend cannot connect to DB
+- Verify `DATABASE_URL`.
+- Ensure `db` container is healthy.
+- Re-run migrations.
 
-- Verify `DATABASE_URL` in `.env`.
-- Ensure `db` container is healthy and running.
-- Re-run `docker compose up` and check backend logs.
-
-### Login fails with seed credentials
-
-- Ensure migrations have run.
-- Re-run seed script.
-- Confirm `.env` seed variables match expected login values.
+### Login fails
+- Ensure seed ran successfully.
+- Verify `SEED_ADMIN_EMAIL`/`SEED_ADMIN_PASSWORD` values.
 
 ### Frontend cannot reach API
+- Verify `VITE_API_BASE_URL`.
+- Verify backend CORS via `CORS_ALLOWED_ORIGINS`.
 
-- Verify `VITE_API_BASE_URL` in `.env`.
-- Check CORS value for `FRONTEND_ORIGIN`.
-- Confirm backend is available at `http://localhost:8000`.
+### Attachments fail to upload
+- Verify file extension is allowed.
+- Verify file size does not exceed `MAX_ATTACHMENT_SIZE_BYTES`.
+- Ensure `LOCAL_STORAGE_DIR` is writable.

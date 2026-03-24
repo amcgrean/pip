@@ -50,13 +50,17 @@ export function ProductsPage() {
   const [status, setStatus] = useState('')
   const [hasAttachments, setHasAttachments] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const [openForm, setOpenForm] = useState(false)
   const [form, setForm] = useState(emptyForm)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / 10)), [total])
 
   const load = async () => {
     try {
+      setLoading(true)
       setError(null)
       const [productsRes, vendorRes] = await Promise.all([
         api.get('/products', {
@@ -76,6 +80,8 @@ export function ProductsPage() {
       setVendors(vendorRes.data)
     } catch {
       setError('Unable to load products')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -89,10 +95,18 @@ export function ProductsPage() {
   }
 
   const saveProduct = async () => {
-    await api.post('/products', form)
-    setOpenForm(false)
-    setForm(emptyForm)
-    void load()
+    try {
+      setSaveError(null)
+      setSaving(true)
+      await api.post('/products', form)
+      setOpenForm(false)
+      setForm(emptyForm)
+      void load()
+    } catch {
+      setSaveError('Unable to create product. Verify required fields and uniqueness.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -156,13 +170,15 @@ export function ProductsPage() {
           ))}
         </TableBody>
       </Table>
-      {rows.length === 0 && <Alert severity="info">No products found.</Alert>}
+      {loading && <Alert severity="info">Loading products...</Alert>}
+      {!loading && rows.length === 0 && <Alert severity="info">No products found.</Alert>}
       <Box display="flex" justifyContent="flex-end"><Pagination page={page} count={totalPages} onChange={(_, value) => setPage(value)} /></Box>
 
       <Dialog open={openForm} onClose={() => setOpenForm(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Create Product</DialogTitle>
         <DialogContent>
           <Stack spacing={2} mt={1}>
+            {saveError && <Alert severity="error">{saveError}</Alert>}
             <TextField label="Internal SKU" value={form.internal_sku} onChange={(e) => setForm({ ...form, internal_sku: e.target.value })} />
             <TextField label="Normalized Name" value={form.normalized_name} onChange={(e) => setForm({ ...form, normalized_name: e.target.value })} />
             <TextField label="Product Type" value={form.product_type} onChange={(e) => setForm({ ...form, product_type: e.target.value })} />
@@ -172,7 +188,7 @@ export function ProductsPage() {
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenForm(false)}>Cancel</Button>
-          <Button variant="contained" onClick={() => void saveProduct()}>Save</Button>
+          <Button variant="contained" disabled={saving} onClick={() => void saveProduct()}>{saving ? 'Saving...' : 'Save'}</Button>
         </DialogActions>
       </Dialog>
     </Stack>
