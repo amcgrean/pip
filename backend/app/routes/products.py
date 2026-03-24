@@ -8,6 +8,7 @@ from app.schemas.domain import PaginationMeta, ProductCreate, ProductDetailOut, 
 from app.services import attachments as attachment_service
 from app.services import mappings as mapping_service
 from app.services import notes as note_service
+from app.services import product_enrichment as enrichment_service
 from app.services import products as product_service
 from app.utils.deps import get_current_user
 
@@ -61,6 +62,9 @@ def get_product_detail(product_id: int, db: Session = Depends(get_db), _: User =
     mappings = mapping_service.list_for_product(db, product_id)
     attachments = attachment_service.list_for_product(db, product_id)
     notes = note_service.list_for_product(db, product_id)
+    aliases = enrichment_service.list_aliases_for_product(db, product_id)
+    images = enrichment_service.list_images_for_product(db, product_id)
+    documents = enrichment_service.list_documents_for_product(db, product_id)
 
     mapping_out = []
     for m in mappings:
@@ -77,6 +81,9 @@ def get_product_detail(product_id: int, db: Session = Depends(get_db), _: User =
         "mappings": mapping_out,
         "attachments": attachment_out,
         "notes": note_out,
+        "aliases": aliases,
+        "images": images,
+        "documents": documents,
     }
 
 

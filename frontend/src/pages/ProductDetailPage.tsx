@@ -1,4 +1,4 @@
-import { Alert, Box, Button, Card, CardContent, Chip, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
+import { Alert, Box, Button, Card, CardContent, Chip, Link, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { api } from '../api/client'
@@ -65,12 +65,39 @@ export function ProductDetailPage() {
   return (
     <Stack spacing={2}>
       {error && <Alert severity="error">{error}</Alert>}
-      <Typography variant="h4">{data.product.normalized_name}</Typography>
+      <Typography variant="h4">{data.product.display_name || data.product.normalized_name}</Typography>
       <Card><CardContent>
         <Typography variant="h6">Core Product Info</Typography>
         <Typography>SKU: {data.product.internal_sku}</Typography>
+        <Typography>Canonical Name: {data.product.canonical_name || '-'}</Typography>
         <Typography>Type: {data.product.product_type || '-'}</Typography>
+        <Typography>Category: {data.product.category || data.product.category_major || '-'}</Typography>
         <Typography>Status: <Chip size="small" label={data.product.status} /></Typography>
+      </CardContent></Card>
+
+      <Card><CardContent>
+        <Typography variant="h6" gutterBottom>Aliases</Typography>
+        {data.aliases.length === 0 && <Typography color="text.secondary">No aliases loaded.</Typography>}
+        {data.aliases.map((a: any) => (
+          <Box key={a.id} mb={1} p={1} sx={{ border: '1px solid #ddd', borderRadius: 1 }}>
+            <Typography>{a.alias_text}</Typography>
+            <Typography variant="caption">{a.alias_type || 'general'} • preferred: {a.is_preferred ? 'yes' : 'no'}</Typography>
+          </Box>
+        ))}
+      </CardContent></Card>
+
+      <Card><CardContent>
+        <Typography variant="h6" gutterBottom>Images</Typography>
+        {data.images.length === 0 && <Typography color="text.secondary">No images loaded.</Typography>}
+        <Table size="small"><TableHead><TableRow><TableCell>Type</TableCell><TableCell>Path/URL</TableCell></TableRow></TableHead>
+          <TableBody>{data.images.map((img: any) => <TableRow key={img.id}><TableCell>{img.image_type || '-'}</TableCell><TableCell><Link href={img.storage_path} target="_blank" rel="noreferrer">{img.storage_path}</Link></TableCell></TableRow>)}</TableBody></Table>
+      </CardContent></Card>
+
+      <Card><CardContent>
+        <Typography variant="h6" gutterBottom>Documents</Typography>
+        {data.documents.length === 0 && <Typography color="text.secondary">No documents loaded.</Typography>}
+        <Table size="small"><TableHead><TableRow><TableCell>Type</TableCell><TableCell>Title</TableCell><TableCell>Location</TableCell></TableRow></TableHead>
+          <TableBody>{data.documents.map((d: any) => <TableRow key={d.id}><TableCell>{d.document_type}</TableCell><TableCell>{d.title}</TableCell><TableCell>{d.file_url ? <Link href={d.file_url} target="_blank" rel="noreferrer">Open</Link> : d.attachment_id ? `Attachment #${d.attachment_id}` : '-'}</TableCell></TableRow>)}</TableBody></Table>
       </CardContent></Card>
 
       <Card><CardContent>

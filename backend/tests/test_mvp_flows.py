@@ -112,3 +112,51 @@ def test_attachment_upload_validation(client, auth_headers):
     files = {'file': ('archive.exe', io.BytesIO(b'fake'), 'application/octet-stream')}
     upload = client.post(f'/api/v1/attachments/product/{product["id"]}', files=files, headers=auth_headers)
     assert upload.status_code == 400
+
+
+def test_product_detail_includes_enrichment_collections(client, auth_headers):
+    product = client.post('/api/v1/products/', json={'internal_sku': 'SKU-DET', 'normalized_name': 'Detail Product', 'status': 'active'}, headers=auth_headers).json()
+    res = client.get(f"/api/v1/products/{product['id']}", headers=auth_headers)
+    assert res.status_code == 200
+    body = res.json()
+    assert 'aliases' in body
+    assert 'images' in body
+    assert 'documents' in body
+
+
+def test_products_seed_import_can_create_note_and_mapping(client, auth_headers):
+    csv_content = b'internal_sku,normalized_name,status,note_text,note_type,vendor_code,vendor_sku,vendor_name\nSKU-RICH,Rich Product,active,Seeded note,seed,VN1,VSKU-1,Vendor One\n'
+    files = {'file': ('products_seed.csv', io.BytesIO(csv_content), 'text/csv')}
+    res = client.post('/api/v1/imports/products-csv', files=files, headers=auth_headers)
+    assert res.status_code == 200
+    assert res.json()['inserted'] == 1
+
+    product = client.get('/api/v1/products/', params={'search': 'SKU-RICH'}, headers=auth_headers).json()['items'][0]
+    detail = client.get(f"/api/v1/products/{product['id']}", headers=auth_headers).json()
+    assert len(detail['notes']) == 1
+    assert detail['notes'][0]['note_text'] == 'Seeded note'
+    assert len(detail['mappings']) == 1
+    assert detail['mappings'][0]['vendor_sku'] == 'VSKU-1'
+
+
+def test_sheet_csv_import_alias_image_document(client, auth_headers):
+    product_csv = b'internal_sku,normalized_name,status\nSKU-SHEETS,Sheets Product,active\n'
+    client.post('/api/v1/imports/products-csv', files={'file': ('products.csv', io.BytesIO(product_csv), 'text/csv')}, headers=auth_headers)
+
+    aliases = b'internal_sku,alias_text,alias_type,is_preferred\nSKU-SHEETS,Contractor Name,slang,true\n'
+    images = b'internal_sku,storage_path,image_type\nSKU-SHEETS,https://example.com/a.jpg,hero\n'
+    documents = b'internal_sku,document_type,title,file_url\nSKU-SHEETS,spec_sheet,Spec Sheet,https://example.com/spec.pdf\n'
+
+    a_res = client.post('/api/v1/imports/sheet-csv', params={'sheet_name': 'item_aliases'}, files={'file': ('item_aliases.csv', io.BytesIO(aliases), 'text/csv')}, headers=auth_headers)
+    i_res = client.post('/api/v1/imports/sheet-csv', params={'sheet_name': 'item_images'}, files={'file': ('item_images.csv', io.BytesIO(images), 'text/csv')}, headers=auth_headers)
+    d_res = client.post('/api/v1/imports/sheet-csv', params={'sheet_name': 'item_documents'}, files={'file': ('item_documents.csv', io.BytesIO(documents), 'text/csv')}, headers=auth_headers)
+
+    assert a_res.status_code == 200
+    assert i_res.status_code == 200
+    assert d_res.status_code == 200
+
+    product = client.get('/api/v1/products/', params={'search': 'SKU-SHEETS'}, headers=auth_headers).json()['items'][0]
+    detail = client.get(f"/api/v1/products/{product['id']}", headers=auth_headers).json()
+    assert len(detail['aliases']) == 1
+    assert len(detail['images']) == 1
+    assert len(detail['documents']) == 1

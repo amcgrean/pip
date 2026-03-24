@@ -17,8 +17,7 @@ def list_import_jobs(page: int = 1, page_size: int = 20, db: Session = Depends(g
     return ImportJobListResponse(items=[ImportJobOut.model_validate(i) for i in items], meta=PaginationMeta(page=page, page_size=page_size, total=total))
 
 
-@router.post("/products-csv", response_model=ImportSummary)
-def upload_products_csv(file: UploadFile = File(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+def _read_csv_upload(file: UploadFile) -> bytes:
     suffix = (file.filename or "").lower().strip()
     if not suffix.endswith(".csv"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only .csv files are supported")
@@ -31,7 +30,36 @@ def upload_products_csv(file: UploadFile = File(...), db: Session = Depends(get_
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"CSV exceeds max size of {settings.max_import_size_bytes} bytes",
         )
-    job = import_service.process_product_csv_import(db, file.filename or "upload.csv", content, user.id)
+    return content
+
+
+@router.post("/products-csv", response_model=ImportSummary)
+def upload_products_csv(file: UploadFile = File(...), db: Session = Depends(get_db), user: User = Depends(get_current_user)):
+    content = _read_csv_upload(file)
+    job = import_service.process_product_csv_import(db, file.filename or "products_seed.csv", content, user.id)
+    return ImportSummary(
+        id=job.id,
+        total_rows=job.total_rows,
+        inserted=job.inserted_rows,
+        updated=job.updated_rows,
+        errored=job.error_rows,
+        status=job.status,
+    )
+
+
+@router.post("/sheet-csv", response_model=ImportSummary)
+def upload_sheet_csv(
+    sheet_name: str,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    content = _read_csv_upload(file)
+    try:
+        job = import_service.process_sheet_csv_import(db, file.filename or f"{sheet_name}.csv", content, user.id, sheet_name=sheet_name)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+
     return ImportSummary(
         id=job.id,
         total_rows=job.total_rows,
