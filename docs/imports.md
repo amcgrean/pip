@@ -51,6 +51,15 @@
 - `item_aliases.alias_text` is also searchable and links back to its product record.
 - Current search behavior uses SQL `ILIKE` (substring/case-insensitive matching) rather than weighted relevance scoring.
 
+### Matching-related import fields
+- The product matcher (`POST /api/v1/products/match`) reuses imported product enrichment and alias fields plus vendor mapping data.
+- Highest-value imported matching signals today:
+  - `products.internal_sku`
+  - `products.canonical_name` / `display_name` / `search_text` / `master_search_text`
+  - `item_aliases.alias_text`
+  - `vendor_code` / `vendor_name` / `vendor_sku` / `vendor_description` in product seed rows
+- For upcoming OCR acknowledgment workflows, accurate `vendor_sku` and stable vendor identity fields (`vendor_code`, `vendor_name`) are especially important because they receive high matching weight.
+
 ### `item_aliases` required columns
 - `internal_sku`, `alias_text`
 

@@ -20,6 +20,26 @@
 - Alias matching uses an `EXISTS` subquery (`Product.aliases.any(...)`) so alias hits do not duplicate product rows.
 - Pagination/count behavior remains stable by deduplicating at the product level before paging.
 
+## Product matching behavior (`POST /api/v1/products/match`)
+- Implemented as a two-stage backend matcher in `app/services/product_matching.py`:
+  1. Candidate retrieval using SQL filters over product text fields, aliases, vendor mappings, and vendor identity inputs.
+  2. Deterministic Python scoring with explicit weights and explainable reasons.
+- Primary matching inputs:
+  - `query_text` (messy OCR-style text, SKU fragments, descriptions)
+  - optional `vendor_name`
+  - optional `vendor_code`
+  - optional `vendor_sku`
+- Vendor signals are first-class:
+  - exact `vendor_sku` matches are one of the highest-weight rules
+  - vendor name/code alignment boosts mapping-linked products
+  - best matching vendor mapping metadata is returned with the result
+- Match responses include:
+  - product identity/display fields
+  - numeric score
+  - confidence bucket (`high`/`medium`/`low`)
+  - `match_reasons` explanation list
+  - matched vendor mapping context (when present)
+
 ## Configuration model
 - All runtime settings are environment-driven (`backend/app/core/config.py`).
 - Settings include validation (environment, log level, secret length, file-size limits).

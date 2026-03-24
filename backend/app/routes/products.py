@@ -4,9 +4,19 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.models.product import Product
 from app.models.user import User
-from app.schemas.domain import PaginationMeta, ProductCreate, ProductDetailOut, ProductListResponse, ProductOut, ProductUpdate
+from app.schemas.domain import (
+    PaginationMeta,
+    ProductCreate,
+    ProductDetailOut,
+    ProductListResponse,
+    ProductMatchRequest,
+    ProductMatchResponse,
+    ProductOut,
+    ProductUpdate,
+)
 from app.services import attachments as attachment_service
 from app.services import mappings as mapping_service
+from app.services import product_matching as product_matching_service
 from app.services import notes as note_service
 from app.services import product_enrichment as enrichment_service
 from app.services import products as product_service
@@ -51,6 +61,11 @@ def list_products(
 @router.post("/", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
 def create_product(payload: ProductCreate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
     return product_service.create_product(db, payload)
+
+
+@router.post("/match", response_model=ProductMatchResponse)
+def match_products(payload: ProductMatchRequest, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+    return product_matching_service.match_products(db, payload)
 
 
 @router.get("/{product_id}", response_model=ProductDetailOut)

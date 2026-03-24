@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, ForeignKey, Numeric, String, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Index, Numeric, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base_class import Base
@@ -7,7 +7,10 @@ from app.models.mixins import TimestampMixin
 
 class VendorProductMapping(TimestampMixin, Base):
     __tablename__ = "vendor_product_mappings"
-    __table_args__ = (UniqueConstraint("vendor_id", "product_id", "vendor_sku", name="uq_vendor_product_sku"),)
+    __table_args__ = (
+        UniqueConstraint("vendor_id", "product_id", "vendor_sku", name="uq_vendor_product_sku"),
+        Index("ix_vendor_product_mappings_vendor_id_vendor_sku", "vendor_id", "vendor_sku"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     vendor_id: Mapped[int] = mapped_column(ForeignKey("vendors.id", ondelete="CASCADE"), index=True, nullable=False)

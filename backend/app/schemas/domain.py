@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from decimal import Decimal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class PaginationMeta(BaseModel):
@@ -278,6 +278,43 @@ class ProductDetailOut(BaseModel):
     aliases: list[ProductAliasOut]
     images: list[ProductImageOut]
     documents: list[ProductDocumentOut]
+
+
+class ProductMatchRequest(BaseModel):
+    query_text: str | None = Field(default=None, max_length=500)
+    vendor_name: str | None = Field(default=None, max_length=255)
+    vendor_code: str | None = Field(default=None, max_length=50)
+    vendor_sku: str | None = Field(default=None, max_length=100)
+    limit: int = Field(default=5, ge=1, le=20)
+
+    @model_validator(mode="after")
+    def validate_at_least_one_signal(self):
+        if not any(
+            value and value.strip()
+            for value in (self.query_text, self.vendor_name, self.vendor_code, self.vendor_sku)
+        ):
+            raise ValueError("At least one matching signal is required")
+        return self
+
+
+class ProductMatchResult(BaseModel):
+    product_id: int
+    internal_sku: str
+    normalized_name: str
+    display_name: str | None = None
+    canonical_name: str | None = None
+    score: int
+    confidence: str
+    match_reasons: list[str]
+    matched_vendor_name: str | None = None
+    matched_vendor_code: str | None = None
+    matched_vendor_sku: str | None = None
+    matched_vendor_description: str | None = None
+    is_primary_vendor_mapping: bool | None = None
+
+
+class ProductMatchResponse(BaseModel):
+    matches: list[ProductMatchResult]
 
 
 class DashboardSummary(BaseModel):
