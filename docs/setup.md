@@ -63,6 +63,7 @@ Use this when you want native local processes instead of containers.
 - API docs (Swagger): `http://localhost:8000/docs`
 - API docs (ReDoc): `http://localhost:8000/redoc`
 - Health: `http://localhost:8000/api/v1/health`
+- Live health: `http://localhost:8000/api/v1/health/live`
 - Version: `http://localhost:8000/api/v1/version`
 
 ## Fresh DB reset

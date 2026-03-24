@@ -1,7 +1,7 @@
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     def allowed_attachment_extensions_set(self) -> set[str]:
         return {ext.strip().lower() for ext in self.allowed_attachment_extensions.split(",") if ext.strip()}
 
+    @property
+    def redacted_database_url(self) -> str:
+        if "@" in self.database_url:
+            return f"***@{self.database_url.split('@', maxsplit=1)[1]}"
+        return self.database_url
+
     @field_validator("environment")
     @classmethod
     def validate_environment(cls, value: str) -> str:
@@ -79,6 +85,17 @@ class Settings(BaseSettings):
         if value <= 0:
             raise ValueError("File size limits must be greater than zero")
         return value
+
+    @model_validator(mode="after")
+    def validate_production_safety(self):
+        if self.is_production:
+            if self.secret_key.strip() == "change-me-please-123":
+                raise ValueError("SECRET_KEY must be overridden in production")
+            if "localhost" in self.database_url or "db:5432" in self.database_url:
+                raise ValueError("DATABASE_URL must be set to a production Postgres connection in production")
+            if not self.cors_origins_list:
+                raise ValueError("CORS_ALLOWED_ORIGINS must contain at least one origin in production")
+        return self
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 

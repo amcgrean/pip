@@ -4,10 +4,12 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.core.config import settings
+from app.db.session import SessionLocal
 from app.routes import api_router
 
 app = FastAPI(title=settings.app_name)
@@ -44,12 +46,22 @@ async def validation_exception_handler(_: Request, exc: RequestValidationError):
 def startup_checks():
     storage_root = Path(settings.local_storage_dir)
     storage_root.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("startup_db_connectivity_failed db=%s", settings.redacted_database_url)
+        raise RuntimeError("Database connectivity check failed during startup") from exc
+
     logger.info(
-        "startup_complete env=%s db=%s storage=%s",
+        "startup_complete env=%s app_version=%s db=%s storage=%s",
         settings.environment,
-        settings.database_url.split("@")[-1],
+        settings.app_version,
+        settings.redacted_database_url,
         storage_root.resolve(),
     )
+
 
 app.add_middleware(
     CORSMiddleware,

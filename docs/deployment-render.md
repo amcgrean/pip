@@ -1,71 +1,165 @@
-# Render Deployment Guide
+# Render Deployment Guide (First Production Deploy)
 
-This document describes the recommended initial deployment for this internal MVP:
-- Backend: Render Web Service (Python)
-- Frontend: Render Static Site
+This runbook is for first deploy of this internal MVP on Render with managed PostgreSQL.
+
+- Backend: Render Web Service (`backend/`)
+- Frontend: Render Static Site (`frontend/`)
 - Database: Render PostgreSQL
+- Blueprint: `render.yaml` at repo root
 
-A baseline `render.yaml` is included at repo root.
+## Deployment strategy (recommended)
 
-## 1) Create Render resources
-1. Create PostgreSQL instance.
-2. Create backend web service from this repo (`rootDir: backend`).
-3. Create frontend static site from this repo (`rootDir: frontend`).
+For this first deploy, keep migrations **automatic per deploy** via Render `releaseCommand`:
 
-## 2) Backend settings
-### Build/start
-- Build command: `pip install -r requirements.txt`
-- Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- `releaseCommand: alembic upgrade head`
+- `startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 
-### Required environment variables
+Why this is the current recommendation:
+- It guarantees each deploy uses the latest schema before app startup.
+- It removes a fragile manual step during operator handoff.
+- If migration fails, deploy fails clearly before serving traffic.
+
+If a future migration is risky/long-running, temporarily switch to manual migration for that release and document it in the release notes.
+
+---
+
+## 1) Create Render PostgreSQL
+
+1. In Render, create PostgreSQL instance named `beisser-ops-db` (or update `render.yaml` names consistently).
+2. Keep credentials managed by Render.
+3. Confirm DB is available before backend deploy.
+
+---
+
+## 2) Create backend service
+
+1. Create web service from this repo.
+2. Confirm:
+   - Root Directory: `backend`
+   - Build command: `pip install -r requirements.txt`
+   - Release command: `alembic upgrade head`
+   - Start command: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+   - Health check path: `/api/v1/health`
+3. Attach `DATABASE_URL` from Render Postgres connection string.
+
+### Required backend environment variables
+
 - `ENVIRONMENT=production`
 - `DEBUG=false`
 - `LOG_LEVEL=INFO`
 - `API_V1_PREFIX=/api/v1`
-- `APP_VERSION` (set to release tag or commit)
-- `DATABASE_URL` (from Render Postgres connection string)
-- `SECRET_KEY` (long random value)
-- `ACCESS_TOKEN_EXPIRE_MINUTES=480` (or preferred)
-- `CORS_ALLOWED_ORIGINS=https://<your-frontend-domain>`
+- `APP_VERSION=<git-sha-or-release-tag>`
+- `DATABASE_URL=<from Render PostgreSQL>`
+- `SECRET_KEY=<long random value, minimum 16 chars>`
+- `ACCESS_TOKEN_EXPIRE_MINUTES=480` (or your policy)
+- `ALGORITHM=HS256`
+- `CORS_ALLOWED_ORIGINS=https://<frontend-domain>`
 - `LOCAL_STORAGE_DIR=/opt/render/project/src/backend/data_storage`
 - `MAX_ATTACHMENT_SIZE_BYTES=10485760`
 - `MAX_IMPORT_SIZE_BYTES=5242880`
 - `ALLOWED_ATTACHMENT_EXTENSIONS=.pdf,.png,.jpg,.jpeg,.csv,.txt,.doc,.docx,.xlsx`
-- `SEED_ADMIN_EMAIL` (required only for first-time seed run)
-- `SEED_ADMIN_PASSWORD` (required only for first-time seed run)
-- `SEED_ADMIN_FULL_NAME` (optional; defaults to Internal Admin)
 
-## 3) Frontend settings
-### Build/publish
-- Build command: `npm ci && npm run build`
-- Publish directory: `dist`
+Optional for first seed only:
+- `SEED_ADMIN_EMAIL`
+- `SEED_ADMIN_PASSWORD`
+- `SEED_ADMIN_FULL_NAME`
 
-### Required environment variable
-- `VITE_API_BASE_URL=https://<your-backend-domain>/api/v1`
+> Production safety checks are enforced at startup: app refuses to boot with placeholder `SECRET_KEY` or local/dev DB URL.
 
-## 4) Database migration and seeding
-After first backend deploy, run once from a Render shell:
-```bash
-alembic upgrade head
-python scripts_seed.py
-```
+---
 
-If you prefer no shell access, run the same two commands in a one-off Render job tied to the backend service.
+## 3) Create frontend static site
 
-## 5) Smoke checks
-- `GET /api/v1/health` returns `status: ok`
-- `GET /api/v1/version` returns expected app version/environment
-- Frontend login succeeds
-- Product list page loads
-- CSV import + attachment upload work within configured limits
+1. Create static site from this repo.
+2. Confirm:
+   - Root Directory: `frontend`
+   - Build command: `npm ci && npm run build`
+   - Publish directory: `dist`
+3. Set:
+   - `VITE_API_BASE_URL=https://<backend-domain>/api/v1`
+4. Redeploy frontend after setting env var (Vite injects at build time).
 
-## Known limitations for this deployment shape
-- Attachment files are stored on local service disk; this is suitable for MVP only.
-- If backend service is redeployed/moved, files may be lost unless persistent disk is configured.
-- Recommended next step after launch: migrate attachment storage to object storage.
+`render.yaml` includes SPA rewrite to `index.html` so deep links work.
 
-## Post-launch recommended next steps
-1. Add persistent disk or object storage for attachments.
-2. Add CI test/build pipeline gates.
-3. Add periodic DB backup verification and restore drill.
-4. Add SSO and stronger role-based access control.
+---
+
+## 4) First deploy run order
+
+1. Deploy database.
+2. Deploy backend (release command runs migrations).
+3. Seed admin from backend shell once:
+   ```bash
+   python scripts_seed.py
+   ```
+4. Deploy frontend (or trigger manual redeploy after `VITE_API_BASE_URL` is set).
+
+---
+
+## 5) Post-deploy verification checklist
+
+Run these in order:
+
+1. **Verify backend health**
+   - `GET https://<backend>/api/v1/health/live` (liveness)
+   - `GET https://<backend>/api/v1/health` (DB readiness)
+2. **Verify backend version**
+   - `GET https://<backend>/api/v1/version`
+   - Ensure `version` and `environment` values are expected.
+3. **Verify login**
+   - Sign in using seeded admin credentials.
+4. **Verify product list API**
+   - `GET /api/v1/products/` from UI after login.
+5. **Verify import endpoints**
+   - `POST /api/v1/imports/products-csv` pilot CSV.
+6. **Verify deterministic matching endpoint with real sample**
+   - `POST /api/v1/products/match` with vendor-aware payload (vendor code/name/SKU + query).
+
+---
+
+## 6) Migration operations after first deploy
+
+Default steady-state:
+- Keep `releaseCommand` for migrations.
+- Every deploy automatically runs `alembic upgrade head`.
+
+Operational caveats:
+- If release command fails, deploy fails before traffic cutover.
+- For unusual/high-risk migrations, run manually first from Render shell:
+  ```bash
+  alembic upgrade head
+  ```
+  Then deploy app code.
+
+---
+
+## 7) Storage behavior on Render (MVP)
+
+Current behavior is local filesystem storage for attachments.
+
+- Path defaults to `LOCAL_STORAGE_DIR=/opt/render/project/src/backend/data_storage`.
+- This is acceptable for internal MVP trials.
+- **Limitation:** files are not durable across instance replacement/redeploy events unless persistent disk/object storage is used.
+
+Do not treat attachments as durable records yet. Keep source files in system-of-record storage until object storage migration is implemented.
+
+---
+
+## 8) Failure diagnostics
+
+If deploy fails:
+
+1. Check Render deploy logs for `releaseCommand` migration output.
+2. Check backend startup logs for `startup_db_connectivity_failed`.
+3. Verify `DATABASE_URL`, `SECRET_KEY`, and `CORS_ALLOWED_ORIGINS` values.
+4. If frontend cannot call backend:
+   - Verify frontend `VITE_API_BASE_URL` value
+   - Verify backend CORS origin exactly matches frontend scheme + host.
+
+---
+
+## Known MVP limitations
+
+- Attachment storage is local filesystem (non-durable on service replacement).
+- No background workers for large imports.
+- No SSO / advanced RBAC yet.
+- Matching is deterministic rules-based (not semantic/ML ranking).

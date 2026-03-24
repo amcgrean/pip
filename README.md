@@ -66,7 +66,10 @@ npm run dev -- --host 0.0.0.0 --port 5173
 ```
 
 ## Deployment
-See `docs/deployment-render.md` for Render-specific steps and required environment variables.
+See `docs/deployment-render.md` for the first-production Render runbook (Postgres, migrations, seeding, smoke tests, and failure diagnostics).
+
+## Imports / Initial Data Load
+See `docs/imports.md` for the pilot-first import sequence, critical matching fields, and match-quality validation checklist.
 
 ## Known MVP Limitations
 - Attachment storage is local filesystem-based (good for MVP/internal usage; not yet cloud object storage).
