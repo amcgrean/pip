@@ -11,6 +11,7 @@ Production-oriented MVP for an internal Product/Vendor workspace.
 ## Implemented MVP Scope
 - JWT login (`/auth/login`) + protected API routes.
 - Product list/detail + create/update APIs with server-side filtering/pagination.
+- Product search supports case-insensitive matching across SKU, normalized/enriched names, descriptions, keywords, search text, master search text, and alias text.
 - Vendor list/create/update APIs.
 - Vendor product mappings with single-primary enforcement per product.
 - Product notes add/list.

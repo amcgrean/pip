@@ -14,6 +14,12 @@
 3. Service layer performs business logic.
 4. Route returns typed response schema.
 
+## Product list search/query behavior
+- Product list queries are built in the service layer with composable SQLAlchemy filters (search + vendor/category/status/attachment filters).
+- Search is case-insensitive (`ILIKE`) and OR-based across core + enriched product text fields.
+- Alias matching uses an `EXISTS` subquery (`Product.aliases.any(...)`) so alias hits do not duplicate product rows.
+- Pagination/count behavior remains stable by deduplicating at the product level before paging.
+
 ## Configuration model
 - All runtime settings are environment-driven (`backend/app/core/config.py`).
 - Settings include validation (environment, log level, secret length, file-size limits).

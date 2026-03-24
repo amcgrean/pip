@@ -45,6 +45,12 @@
 - Optional vendor mapping fields:
   - `vendor_code`, `vendor_name`, `vendor_sku`, `vendor_description`, `vendor_uom`, `last_cost`, `mapping_is_primary`
 
+### Search-related import fields
+- `canonical_name`, `display_name`, `keywords`, `search_text`, and `master_search_text` feed directly into product list search.
+- `master_search_text` is intended as the catch-all search payload when upstream systems provide pre-concatenated terms/synonyms.
+- `item_aliases.alias_text` is also searchable and links back to its product record.
+- Current search behavior uses SQL `ILIKE` (substring/case-insensitive matching) rather than weighted relevance scoring.
+
 ### `item_aliases` required columns
 - `internal_sku`, `alias_text`
 
