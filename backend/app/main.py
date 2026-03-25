@@ -34,10 +34,21 @@ async def request_logging_middleware(request: Request, call_next):
     return response
 
 
+def _json_safe(value):
+    if value is None or isinstance(value, (str, int, float, bool)):
+        return value
+    if isinstance(value, dict):
+        return {str(k): _json_safe(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [_json_safe(item) for item in value]
+    return str(value)
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(_: Request, exc: RequestValidationError):
-    logger.warning("validation_error count=%s", len(exc.errors()))
-    return JSONResponse(status_code=422, content={"detail": "Invalid request payload", "errors": exc.errors()})
+    errors = _json_safe(exc.errors())
+    logger.warning("validation_error count=%s", len(errors))
+    return JSONResponse(status_code=422, content={"detail": "Invalid request payload", "errors": errors})
 
 
 @app.on_event("startup")

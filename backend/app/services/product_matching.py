@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from sqlalchemy import or_
+from sqlalchemy import and_, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.models.product import Product
@@ -223,13 +223,6 @@ def match_products(db: Session, payload: ProductMatchRequest) -> ProductMatchRes
     if not search_fragments:
         return ProductMatchResponse(matches=[])
 
-    candidate_query = (
-        db.query(Product)
-        .outerjoin(ProductAlias, ProductAlias.product_id == Product.id)
-        .outerjoin(VendorProductMapping, VendorProductMapping.product_id == Product.id)
-        .outerjoin(Vendor, Vendor.id == VendorProductMapping.vendor_id)
-    )
-
     candidate_conditions = []
     if normalized_query_text:
         term = f"%{normalized_query_text}%"
@@ -243,26 +236,50 @@ def match_products(db: Session, payload: ProductMatchRequest) -> ProductMatchRes
                 Product.keywords.ilike(term),
                 Product.search_text.ilike(term),
                 Product.master_search_text.ilike(term),
-                ProductAlias.alias_text.ilike(term),
-                VendorProductMapping.vendor_sku.ilike(term),
-                VendorProductMapping.vendor_description.ilike(term),
-                VendorProductMapping.vendor_uom.ilike(term),
+                Product.aliases.any(ProductAlias.alias_text.ilike(term)),
+                Product.mappings.any(
+                    or_(
+                        VendorProductMapping.vendor_sku.ilike(term),
+                        VendorProductMapping.vendor_description.ilike(term),
+                        VendorProductMapping.vendor_uom.ilike(term),
+                    )
+                ),
             ]
         )
     if normalized_vendor_name:
-        candidate_conditions.append(Vendor.vendor_name.ilike(f"%{normalized_vendor_name}%"))
+        candidate_conditions.append(
+            Product.mappings.any(
+                VendorProductMapping.vendor.has(Vendor.vendor_name.ilike(f"%{normalized_vendor_name}%"))
+            )
+        )
     if normalized_vendor_code:
-        candidate_conditions.append(Vendor.vendor_code.ilike(f"%{normalized_vendor_code}%"))
+        candidate_conditions.append(
+            Product.mappings.any(
+                VendorProductMapping.vendor.has(Vendor.vendor_code.ilike(f"%{normalized_vendor_code}%"))
+            )
+        )
     if normalized_vendor_sku:
-        candidate_conditions.append(VendorProductMapping.vendor_sku.ilike(f"%{normalized_vendor_sku}%"))
+        candidate_conditions.append(
+            Product.mappings.any(VendorProductMapping.vendor_sku.ilike(f"%{normalized_vendor_sku}%"))
+        )
+
+    if normalized_vendor_code and normalized_vendor_sku:
+        candidate_conditions.append(
+            Product.mappings.any(
+                and_(
+                    VendorProductMapping.vendor_sku.ilike(f"%{normalized_vendor_sku}%"),
+                    VendorProductMapping.vendor.has(Vendor.vendor_code.ilike(f"%{normalized_vendor_code}%")),
+                )
+            )
+        )
 
     candidates = (
-        candidate_query.filter(or_(*candidate_conditions))
+        db.query(Product)
+        .filter(or_(*candidate_conditions))
         .options(
             joinedload(Product.aliases),
             joinedload(Product.mappings).joinedload(VendorProductMapping.vendor),
         )
-        .distinct(Product.id)
         .limit(250)
         .all()
     )
