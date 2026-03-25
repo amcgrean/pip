@@ -64,6 +64,7 @@ def test_product_match_exact_internal_sku(client, auth_headers):
     response = client.post("/api/v1/products/match", json={"query_text": "sku-exact-1"}, headers=auth_headers)
     assert response.status_code == 200
     payload = response.json()
+    assert payload["matches"], f"Expected at least one match, got payload={payload}"
     assert payload["matches"][0]["internal_sku"] == "SKU-EXACT-1"
     assert payload["matches"][0]["confidence"] == "high"
     assert "exact internal_sku match" in payload["matches"][0]["match_reasons"]
@@ -84,7 +85,9 @@ def test_product_match_exact_vendor_sku(client, auth_headers):
         headers=auth_headers,
     )
     assert response.status_code == 200
-    top = response.json()["matches"][0]
+    payload = response.json()
+    assert payload["matches"], f"Expected at least one match, got payload={payload}"
+    top = payload["matches"][0]
     assert top["product_id"] == product["id"]
     assert top["confidence"] == "high"
     assert top["matched_vendor_sku"] == "VN-001-A"
@@ -200,3 +203,4 @@ def test_product_match_handles_noisy_input_without_crashing(client, auth_headers
 def test_product_match_requires_signal(client, auth_headers):
     response = client.post("/api/v1/products/match", json={"query_text": "   "}, headers=auth_headers)
     assert response.status_code == 422
+    assert response.json()["detail"] == "Invalid request payload"

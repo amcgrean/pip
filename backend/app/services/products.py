@@ -32,9 +32,9 @@ def list_products(
     sort_by: str,
     sort_dir: str,
 ):
-    query = db.query(Product)
+    query = db.query(Product.id)
     if vendor_id:
-        query = query.join(VendorProductMapping).filter(VendorProductMapping.vendor_id == vendor_id)
+        query = query.filter(Product.mappings.any(VendorProductMapping.vendor_id == vendor_id))
     search_term = (search or "").strip()
     if search_term:
         term = f"%{search_term}%"
@@ -65,14 +65,17 @@ def list_products(
         else:
             query = query.filter(~Product.attachments.any())
 
-    total = query.distinct(Product.id).count()
+    total = query.count()
     order_col = SORT_COLUMNS.get(sort_by, Product.normalized_name)
     ordered = desc(order_col) if sort_dir.lower() == "desc" else asc(order_col)
+    product_ids = [
+        row[0]
+        for row in query.order_by(ordered, asc(Product.id)).offset((page - 1) * page_size).limit(page_size).all()
+    ]
     rows = (
-        query.distinct(Product.id)
-        .order_by(ordered)
-        .offset((page - 1) * page_size)
-        .limit(page_size)
+        db.query(Product)
+        .filter(Product.id.in_(product_ids or [0]))
+        .order_by(ordered, asc(Product.id))
         .all()
     )
 

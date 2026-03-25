@@ -106,6 +106,8 @@ def _upsert_vendor_mapping(db: Session, product: Product, row: dict[str, str]) -
         db.add(vendor)
         db.flush()
 
+    db.flush()
+
     mapping = (
         db.query(VendorProductMapping)
         .filter(
@@ -134,6 +136,7 @@ def _upsert_vendor_mapping(db: Session, product: Product, row: dict[str, str]) -
             **mapping_values,
         )
     )
+    db.flush()
     return 1, 0
 
 
