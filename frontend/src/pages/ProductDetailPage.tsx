@@ -69,7 +69,7 @@ export function ProductDetailPage() {
       <Card><CardContent>
         <Typography variant="h6">Core Product Info</Typography>
         <Typography>SKU: {data.product.internal_sku}</Typography>
-        <Typography>Canonical Name: {data.product.canonical_name || '-'}</Typography>
+        <Typography>Canonical Name: {data.product.canonical_name || data.product.display_name || data.product.normalized_name}</Typography>
         <Typography>Type: {data.product.product_type || '-'}</Typography>
         <Typography>Category: {data.product.category || data.product.category_major || '-'}</Typography>
         <Typography>Status: <Chip size="small" label={data.product.status} /></Typography>
@@ -103,7 +103,7 @@ export function ProductDetailPage() {
       <Card><CardContent>
         <Typography variant="h6" gutterBottom>Vendor Mappings</Typography>
         <Table size="small"><TableHead><TableRow><TableCell>Vendor</TableCell><TableCell>Vendor SKU</TableCell><TableCell>Primary</TableCell></TableRow></TableHead>
-          <TableBody>{data.mappings.map((m: any) => <TableRow key={m.id}><TableCell>{m.vendor_name}</TableCell><TableCell>{m.vendor_sku}</TableCell><TableCell>{m.is_primary ? 'Yes' : 'No'}</TableCell></TableRow>)}</TableBody></Table>
+          <TableBody>{data.mappings.map((m: any) => <TableRow key={m.id}><TableCell>{m.vendor_name || '-'}</TableCell><TableCell>{m.vendor_sku}</TableCell><TableCell>{m.is_primary ? 'Yes' : 'No'}</TableCell></TableRow>)}</TableBody></Table>
       </CardContent></Card>
 
       <Card><CardContent>

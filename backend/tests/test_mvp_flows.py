@@ -8,13 +8,13 @@ def test_health_endpoint(client):
 
 
 def test_auth_login_success(client):
-    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.local', 'password': 'Password123!'})
+    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.com', 'password': 'Password123!'})
     assert response.status_code == 200
     assert response.json()['access_token']
 
 
 def test_auth_login_failure(client):
-    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.local', 'password': 'wrong-password'})
+    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.com', 'password': 'wrong-password'})
     assert response.status_code == 401
 
 
@@ -44,6 +44,139 @@ def test_product_filter_behavior(client, auth_headers):
     assert response.status_code == 200
     assert response.json()['meta']['total'] == 1
     assert response.json()['items'][0]['internal_sku'] == 'SKU-10'
+
+
+def test_product_search_matches_enriched_fields(client, auth_headers):
+    client.post(
+        '/api/v1/products/',
+        json={
+            'internal_sku': 'SKU-SEARCH-1',
+            'normalized_name': 'Utility Board',
+            'description': 'Core product',
+            'canonical_name': 'Prime White Oak Board',
+            'display_name': 'White Oak Premium',
+            'keywords': 'durable,millwork,finish',
+            'search_text': 'legacy code yellow tag',
+            'master_search_text': 'beisser showroom premium plank',
+            'status': 'active',
+        },
+        headers=auth_headers,
+    )
+
+    expectations = [
+        ('prime white', 'SKU-SEARCH-1'),
+        ('oak premium', 'SKU-SEARCH-1'),
+        ('millwork', 'SKU-SEARCH-1'),
+        ('yellow tag', 'SKU-SEARCH-1'),
+        ('showroom premium', 'SKU-SEARCH-1'),
+    ]
+    for term, expected_sku in expectations:
+        response = client.get('/api/v1/products/', params={'search': term}, headers=auth_headers)
+        assert response.status_code == 200
+        assert response.json()['meta']['total'] == 1
+        assert response.json()['items'][0]['internal_sku'] == expected_sku
+
+
+def test_product_search_matches_alias_without_duplicate_rows(client, auth_headers):
+    product_1 = client.post('/api/v1/products/', json={'internal_sku': 'SKU-ALIAS-1', 'normalized_name': 'Alias Product 1', 'status': 'active'}, headers=auth_headers).json()
+    client.post('/api/v1/products/', json={'internal_sku': 'SKU-ALIAS-2', 'normalized_name': 'Alias Product 2', 'status': 'active'}, headers=auth_headers)
+
+    alias_rows = (
+        b'internal_sku,alias_text,alias_type,is_preferred\n'
+        b'SKU-ALIAS-1,Contractor Pine,trade,true\n'
+        b'SKU-ALIAS-1,Contractor Pine Board,trade,false\n'
+    )
+    import_res = client.post(
+        '/api/v1/imports/sheet-csv',
+        params={'sheet_name': 'item_aliases'},
+        files={'file': ('item_aliases.csv', io.BytesIO(alias_rows), 'text/csv')},
+        headers=auth_headers,
+    )
+    assert import_res.status_code == 200
+
+    response = client.get('/api/v1/products/', params={'search': 'contractor pine'}, headers=auth_headers)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload['meta']['total'] == 1
+    assert len(payload['items']) == 1
+    assert payload['items'][0]['id'] == product_1['id']
+    assert payload['items'][0]['internal_sku'] == 'SKU-ALIAS-1'
+
+
+def test_product_search_pagination_and_filters_work_together(client, auth_headers):
+    v1 = client.post('/api/v1/vendors/', json={'vendor_code': 'VS1', 'vendor_name': 'Vendor Search 1', 'is_active': True}, headers=auth_headers).json()
+    v2 = client.post('/api/v1/vendors/', json={'vendor_code': 'VS2', 'vendor_name': 'Vendor Search 2', 'is_active': True}, headers=auth_headers).json()
+
+    p1 = client.post(
+        '/api/v1/products/',
+        json={'internal_sku': 'SKU-PAGE-1', 'normalized_name': 'Page Product 1', 'master_search_text': 'focus-term', 'status': 'active', 'category_major': 'Lumber'},
+        headers=auth_headers,
+    ).json()
+    p2 = client.post(
+        '/api/v1/products/',
+        json={'internal_sku': 'SKU-PAGE-2', 'normalized_name': 'Page Product 2', 'master_search_text': 'focus-term', 'status': 'active', 'category_major': 'Lumber'},
+        headers=auth_headers,
+    ).json()
+    client.post(
+        '/api/v1/products/',
+        json={'internal_sku': 'SKU-PAGE-3', 'normalized_name': 'Page Product 3', 'master_search_text': 'focus-term', 'status': 'inactive', 'category_major': 'Lumber'},
+        headers=auth_headers,
+    )
+
+    client.post('/api/v1/mappings/', json={'vendor_id': v1['id'], 'product_id': p1['id'], 'vendor_sku': 'V1-1', 'is_primary': True}, headers=auth_headers)
+    client.post('/api/v1/mappings/', json={'vendor_id': v1['id'], 'product_id': p2['id'], 'vendor_sku': 'V1-2', 'is_primary': True}, headers=auth_headers)
+    client.post('/api/v1/mappings/', json={'vendor_id': v2['id'], 'product_id': p2['id'], 'vendor_sku': 'V2-2', 'is_primary': True}, headers=auth_headers)
+
+    page_1 = client.get(
+        '/api/v1/products/',
+        params={
+            'search': ' focus-term ',
+            'status': 'active',
+            'category_major': 'Lumber',
+            'vendor_id': v1['id'],
+            'page': 1,
+            'page_size': 1,
+            'sort_by': 'internal_sku',
+            'sort_dir': 'asc',
+        },
+        headers=auth_headers,
+    )
+    assert page_1.status_code == 200
+    body_1 = page_1.json()
+    assert body_1['meta']['total'] == 2
+    assert len(body_1['items']) == 1
+    assert body_1['items'][0]['internal_sku'] == 'SKU-PAGE-1'
+
+    page_2 = client.get(
+        '/api/v1/products/',
+        params={
+            'search': ' focus-term ',
+            'status': 'active',
+            'category_major': 'Lumber',
+            'vendor_id': v1['id'],
+            'page': 2,
+            'page_size': 1,
+            'sort_by': 'internal_sku',
+            'sort_dir': 'asc',
+        },
+        headers=auth_headers,
+    )
+    assert page_2.status_code == 200
+    body_2 = page_2.json()
+    assert body_2['meta']['total'] == 2
+    assert len(body_2['items']) == 1
+    assert body_2['items'][0]['internal_sku'] == 'SKU-PAGE-2'
+
+
+def test_blank_search_input_does_not_filter(client, auth_headers):
+    client.post('/api/v1/products/', json={'internal_sku': 'SKU-BLANK-1', 'normalized_name': 'Blank One', 'status': 'active'}, headers=auth_headers)
+    client.post('/api/v1/products/', json={'internal_sku': 'SKU-BLANK-2', 'normalized_name': 'Blank Two', 'status': 'active'}, headers=auth_headers)
+
+    response = client.get('/api/v1/products/', params={'search': '   '}, headers=auth_headers)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload['meta']['total'] == 2
+    assert {item['internal_sku'] for item in payload['items']} == {'SKU-BLANK-1', 'SKU-BLANK-2'}
 
 
 def test_vendor_mapping_creation(client, auth_headers):
