@@ -218,6 +218,9 @@ def match_products(db: Session, payload: ProductMatchRequest) -> ProductMatchRes
     normalized_vendor_name = normalize_text(payload.vendor_name)
     normalized_vendor_code = normalize_text(payload.vendor_code)
     normalized_vendor_sku = normalize_text(payload.vendor_sku)
+    raw_query_text = (payload.query_text or "").strip()
+    raw_vendor_sku = (payload.vendor_sku or "").strip()
+    raw_vendor_code = (payload.vendor_code or "").strip()
 
     search_fragments = [value for value in (normalized_query_text, normalized_vendor_name, normalized_vendor_code, normalized_vendor_sku) if value]
     if not search_fragments:
@@ -246,6 +249,18 @@ def match_products(db: Session, payload: ProductMatchRequest) -> ProductMatchRes
                 ),
             ]
         )
+        # Also search using the raw query text to catch cases where normalization
+        # converts punctuation to spaces (e.g. "SKU-1" normalizes to "sku 1" but
+        # the raw form "sku-1" still matches stored "SKU-1" via ilike).
+        if raw_query_text and raw_query_text.lower() != normalized_query_text:
+            raw_term = f"%{raw_query_text}%"
+            candidate_conditions.extend(
+                [
+                    Product.internal_sku.ilike(raw_term),
+                    Product.aliases.any(ProductAlias.alias_text.ilike(raw_term)),
+                    Product.mappings.any(VendorProductMapping.vendor_sku.ilike(raw_term)),
+                ]
+            )
     if normalized_vendor_name:
         candidate_conditions.append(
             Product.mappings.any(
@@ -262,6 +277,11 @@ def match_products(db: Session, payload: ProductMatchRequest) -> ProductMatchRes
         candidate_conditions.append(
             Product.mappings.any(VendorProductMapping.vendor_sku.ilike(f"%{normalized_vendor_sku}%"))
         )
+        # Also search with the raw vendor_sku in case normalization changes punctuation to spaces
+        if raw_vendor_sku and raw_vendor_sku.lower() != normalized_vendor_sku:
+            candidate_conditions.append(
+                Product.mappings.any(VendorProductMapping.vendor_sku.ilike(f"%{raw_vendor_sku}%"))
+            )
 
     if normalized_vendor_code and normalized_vendor_sku:
         candidate_conditions.append(
@@ -272,6 +292,16 @@ def match_products(db: Session, payload: ProductMatchRequest) -> ProductMatchRes
                 )
             )
         )
+        # Also check with raw values
+        if (raw_vendor_sku and raw_vendor_sku.lower() != normalized_vendor_sku) or (raw_vendor_code and raw_vendor_code.lower() != normalized_vendor_code):
+            candidate_conditions.append(
+                Product.mappings.any(
+                    and_(
+                        VendorProductMapping.vendor_sku.ilike(f"%{raw_vendor_sku}%"),
+                        VendorProductMapping.vendor.has(Vendor.vendor_code.ilike(f"%{raw_vendor_code}%")),
+                    )
+                )
+            )
 
     candidates = (
         db.query(Product)

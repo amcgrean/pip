@@ -8,13 +8,13 @@ def test_health_endpoint(client):
 
 
 def test_auth_login_success(client):
-    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.local', 'password': 'Password123!'})
+    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.com', 'password': 'Password123!'})
     assert response.status_code == 200
     assert response.json()['access_token']
 
 
 def test_auth_login_failure(client):
-    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.local', 'password': 'wrong-password'})
+    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.com', 'password': 'wrong-password'})
     assert response.status_code == 401
 
 
@@ -212,12 +212,14 @@ def test_import_upsert_behavior(client, auth_headers):
 
 
 def test_import_missing_required_columns(client, auth_headers):
-    csv_content = b'internal_sku,normalized_name,vendor_code\nSKU-3,Import Product,VEND1\n'
+    csv_content = b'internal_sku,vendor_code,vendor_sku\nSKU-3,VEND1,VSKU1\n'
     files = {'file': ('products.csv', io.BytesIO(csv_content), 'text/csv')}
     res = client.post('/api/v1/imports/products-csv', files=files, headers=auth_headers)
     assert res.status_code == 200
-    assert res.json()['status'] == 'completed'
-    assert res.json()['inserted'] == 1
+    assert res.json()['status'] == 'failed'
+
+    jobs = client.get('/api/v1/imports/jobs', headers=auth_headers).json()['items']
+    assert 'Missing required columns' in jobs[0]['error_log']
 
 
 def test_import_blank_rows_are_ignored(client, auth_headers):

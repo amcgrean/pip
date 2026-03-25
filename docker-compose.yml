@@ -9,6 +9,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-beisser} -d ${POSTGRES_DB:-beisser_ops}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   backend:
     build:
@@ -16,10 +21,11 @@ services:
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     env_file: .env
     environment:
+      APP_VERSION: ${APP_VERSION:-local-dev}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://beisser:beisser@db:5432/beisser_ops}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173}
       SECRET_KEY: ${SECRET_KEY:-change-me-please-123}
-      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@beisser-internal.local}
+      SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@beisser-internal.com}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-ChangeMe123!}
       SEED_ADMIN_FULL_NAME: ${SEED_ADMIN_FULL_NAME:-Internal Admin}
     ports:
@@ -27,7 +33,8 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   frontend:
     build:
