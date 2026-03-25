@@ -141,6 +141,7 @@ def _upsert_vendor_mapping(db: Session, product: Product, row: dict[str, str]) -
             **mapping_values,
         )
     )
+    db.flush()
     return 1, 0
 
 
