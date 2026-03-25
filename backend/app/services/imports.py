@@ -16,7 +16,7 @@ from app.models.vendor import Vendor
 from app.models.vendor_product_mapping import VendorProductMapping
 
 REQUIRED_COLUMNS = {
-    "products_seed": {"internal_sku", "normalized_name"},
+    "products_seed": {"internal_sku", "normalized_name", "vendor_code", "vendor_sku"},
     "item_aliases": {"internal_sku", "alias_text"},
     "item_images": {"internal_sku", "storage_path"},
     "item_documents": {"internal_sku", "document_type", "title"},
