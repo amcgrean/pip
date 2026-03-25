@@ -212,7 +212,7 @@ def test_import_upsert_behavior(client, auth_headers):
 
 
 def test_import_missing_required_columns(client, auth_headers):
-    csv_content = b'internal_sku,normalized_name,vendor_code\nSKU-3,Import Product,VEND1\n'
+    csv_content = b'internal_sku,vendor_code,vendor_sku\nSKU-3,VEND1,VSKU1\n'
     files = {'file': ('products.csv', io.BytesIO(csv_content), 'text/csv')}
     res = client.post('/api/v1/imports/products-csv', files=files, headers=auth_headers)
     assert res.status_code == 200
