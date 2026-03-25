@@ -4,10 +4,12 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.core.config import settings
+from app.db.session import SessionLocal
 from app.routes import api_router
 
 app = FastAPI(title=settings.app_name)
@@ -34,22 +36,44 @@ async def request_logging_middleware(request: Request, call_next):
     return response
 
 
+def _serialize_validation_errors(exc: RequestValidationError) -> list[dict]:
+    serialized: list[dict] = []
+    for error in exc.errors():
+        payload = dict(error)
+        ctx = payload.get("ctx")
+        if isinstance(ctx, dict):
+            payload["ctx"] = {key: str(value) for key, value in ctx.items()}
+        serialized.append(payload)
+    return serialized
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(_: Request, exc: RequestValidationError):
-    logger.warning("validation_error count=%s", len(exc.errors()))
-    return JSONResponse(status_code=422, content={"detail": "Invalid request payload", "errors": exc.errors()})
+    errors = _serialize_validation_errors(exc)
+    logger.warning("validation_error count=%s", len(errors))
+    return JSONResponse(status_code=422, content={"detail": "Invalid request payload", "errors": errors})
 
 
 @app.on_event("startup")
 def startup_checks():
     storage_root = Path(settings.local_storage_dir)
     storage_root.mkdir(parents=True, exist_ok=True)
+
+    try:
+        with SessionLocal() as db:
+            db.execute(text("SELECT 1"))
+    except Exception as exc:  # noqa: BLE001
+        logger.exception("startup_db_connectivity_failed db=%s", settings.redacted_database_url)
+        raise RuntimeError("Database connectivity check failed during startup") from exc
+
     logger.info(
-        "startup_complete env=%s db=%s storage=%s",
+        "startup_complete env=%s app_version=%s db=%s storage=%s",
         settings.environment,
-        settings.database_url.split("@")[-1],
+        settings.app_version,
+        settings.redacted_database_url,
         storage_root.resolve(),
     )
+
 
 app.add_middleware(
     CORSMiddleware,

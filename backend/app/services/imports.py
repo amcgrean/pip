@@ -16,7 +16,7 @@ from app.models.vendor import Vendor
 from app.models.vendor_product_mapping import VendorProductMapping
 
 REQUIRED_COLUMNS = {
-    "products_seed": {"internal_sku", "normalized_name"},
+    "products_seed": {"internal_sku", "normalized_name", "vendor_code", "vendor_sku"},
     "item_aliases": {"internal_sku", "alias_text"},
     "item_images": {"internal_sku", "storage_path"},
     "item_documents": {"internal_sku", "document_type", "title"},
@@ -106,6 +106,8 @@ def _upsert_vendor_mapping(db: Session, product: Product, row: dict[str, str]) -
         db.add(vendor)
         db.flush()
 
+    db.flush()
+
     mapping = (
         db.query(VendorProductMapping)
         .filter(
@@ -121,6 +123,13 @@ def _upsert_vendor_mapping(db: Session, product: Product, row: dict[str, str]) -
         "last_cost": _parse_decimal(row.get("last_cost"), "last_cost"),
         "is_primary": _parse_bool(row.get("mapping_is_primary"), default=False),
     }
+    if mapping_values["is_primary"]:
+        db.query(VendorProductMapping).filter(
+            VendorProductMapping.product_id == product.id,
+            VendorProductMapping.is_primary.is_(True),
+            VendorProductMapping.id != (mapping.id if mapping else 0),
+        ).update({"is_primary": False}, synchronize_session=False)
+
     if mapping:
         for key, value in mapping_values.items():
             setattr(mapping, key, value)

@@ -214,6 +214,7 @@ def _score_product(
 
 
 def match_products(db: Session, payload: ProductMatchRequest) -> ProductMatchResponse:
+    raw_query_text = (payload.query_text or "").strip()
     normalized_query_text = normalize_text(payload.query_text)
     normalized_vendor_name = normalize_text(payload.vendor_name)
     normalized_vendor_code = normalize_text(payload.vendor_code)
@@ -231,24 +232,28 @@ def match_products(db: Session, payload: ProductMatchRequest) -> ProductMatchRes
     )
 
     candidate_conditions = []
-    if normalized_query_text:
-        term = f"%{normalized_query_text}%"
-        candidate_conditions.extend(
-            [
-                Product.internal_sku.ilike(term),
-                Product.normalized_name.ilike(term),
-                Product.description.ilike(term),
-                Product.canonical_name.ilike(term),
-                Product.display_name.ilike(term),
-                Product.keywords.ilike(term),
-                Product.search_text.ilike(term),
-                Product.master_search_text.ilike(term),
-                ProductAlias.alias_text.ilike(term),
-                VendorProductMapping.vendor_sku.ilike(term),
-                VendorProductMapping.vendor_description.ilike(term),
-                VendorProductMapping.vendor_uom.ilike(term),
-            ]
-        )
+    if normalized_query_text or raw_query_text:
+        normalized_term = f"%{normalized_query_text}%" if normalized_query_text else None
+        raw_term = f"%{raw_query_text}%" if raw_query_text else None
+
+        text_terms = [term for term in (raw_term, normalized_term) if term]
+        for term in text_terms:
+            candidate_conditions.extend(
+                [
+                    Product.internal_sku.ilike(term),
+                    Product.normalized_name.ilike(term),
+                    Product.description.ilike(term),
+                    Product.canonical_name.ilike(term),
+                    Product.display_name.ilike(term),
+                    Product.keywords.ilike(term),
+                    Product.search_text.ilike(term),
+                    Product.master_search_text.ilike(term),
+                    ProductAlias.alias_text.ilike(term),
+                    VendorProductMapping.vendor_sku.ilike(term),
+                    VendorProductMapping.vendor_description.ilike(term),
+                    VendorProductMapping.vendor_uom.ilike(term),
+                ]
+            )
     if normalized_vendor_name:
         candidate_conditions.append(Vendor.vendor_name.ilike(f"%{normalized_vendor_name}%"))
     if normalized_vendor_code:

@@ -8,13 +8,13 @@ def test_health_endpoint(client):
 
 
 def test_auth_login_success(client):
-    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.local', 'password': 'Password123!'})
+    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.com', 'password': 'Password123!'})
     assert response.status_code == 200
     assert response.json()['access_token']
 
 
 def test_auth_login_failure(client):
-    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.local', 'password': 'wrong-password'})
+    response = client.post('/api/v1/auth/login', json={'email': 'admin@test.com', 'password': 'wrong-password'})
     assert response.status_code == 401
 
 

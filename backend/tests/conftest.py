@@ -32,7 +32,7 @@ def setup_db():
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     db = TestingSessionLocal()
-    db.add(User(email='admin@test.local', full_name='Admin', password_hash=get_password_hash('Password123!'), role='admin', is_active=True))
+    db.add(User(email='admin@test.com', full_name='Admin', password_hash=get_password_hash('Password123!'), role='admin', is_active=True))
     db.commit()
     db.close()
 
@@ -55,6 +55,6 @@ def client():
 
 @pytest.fixture
 def auth_headers(client):
-    res = client.post('/api/v1/auth/login', json={'email': 'admin@test.local', 'password': 'Password123!'})
+    res = client.post('/api/v1/auth/login', json={'email': 'admin@test.com', 'password': 'Password123!'})
     token = res.json()['access_token']
     return {'Authorization': f'Bearer {token}'}
