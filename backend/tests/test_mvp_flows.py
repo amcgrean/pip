@@ -273,7 +273,7 @@ def test_products_seed_import_can_create_note_and_mapping(client, auth_headers):
 
 
 def test_sheet_csv_import_alias_image_document(client, auth_headers):
-    product_csv = b'internal_sku,normalized_name,status\nSKU-SHEETS,Sheets Product,active\n'
+    product_csv = b'internal_sku,normalized_name,status,vendor_code,vendor_sku\nSKU-SHEETS,Sheets Product,active,VEND-SHEETS,VSKU-SHEETS\n'
     client.post('/api/v1/imports/products-csv', files={'file': ('products.csv', io.BytesIO(product_csv), 'text/csv')}, headers=auth_headers)
 
     aliases = b'internal_sku,alias_text,alias_type,is_preferred\nSKU-SHEETS,Contractor Name,slang,true\n'
