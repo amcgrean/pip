@@ -48,6 +48,7 @@ export function AppLayout() {
             sx={{
               borderRadius: 2,
               mb: 0.5,
+              minHeight: 48,
               '&.Mui-selected': { bgcolor: 'primary.main', color: 'white', '& .MuiListItemIcon-root': { color: 'white' }, '&:hover': { bgcolor: 'primary.dark' } },
             }}
           >
@@ -57,6 +58,11 @@ export function AppLayout() {
         ))}
       </List>
       <Divider sx={{ mt: 'auto' }} />
+      {isMobile && user?.full_name && (
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Typography variant="caption" color="text.secondary" display="block">{user.full_name}</Typography>
+        </Box>
+      )}
       <Box sx={{ p: 2 }}>
         <Typography variant="caption" color="text.secondary">PIP v2.0</Typography>
       </Box>
@@ -73,16 +79,23 @@ export function AppLayout() {
               edge="start"
               onClick={() => setDrawerOpen((prev) => !prev)}
               sx={{ mr: 1 }}
+              aria-label="Open navigation menu"
             >
               <MenuIcon />
             </IconButton>
           )}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexGrow: 1 }}>
             <Typography variant="h6" fontWeight={700} letterSpacing={-0.5}>Beisser</Typography>
-            <Typography variant="body2" sx={{ opacity: 0.7, mt: 0.3 }}>Internal Operations Platform</Typography>
+            <Typography variant="body2" sx={{ opacity: 0.7, mt: 0.3, display: { xs: 'none', md: 'inline' } }}>Internal Operations Platform</Typography>
           </Box>
-          <Typography variant="body2" sx={{ mr: 2, opacity: 0.9 }}>{user?.full_name}</Typography>
-          <Button color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout} sx={{ opacity: 0.9 }}>Sign Out</Button>
+          <Typography variant="body2" sx={{ mr: 2, opacity: 0.9, display: { xs: 'none', md: 'block' } }}>{user?.full_name}</Typography>
+          {isMobile ? (
+            <IconButton color="inherit" onClick={logout} size="small" sx={{ opacity: 0.9 }} aria-label="Sign out">
+              <LogoutIcon />
+            </IconButton>
+          ) : (
+            <Button color="inherit" size="small" startIcon={<LogoutIcon />} onClick={logout} sx={{ opacity: 0.9 }}>Sign Out</Button>
+          )}
         </Toolbar>
       </AppBar>
 
@@ -105,7 +118,7 @@ export function AppLayout() {
         </Drawer>
       )}
 
-      <Box component="main" sx={{ flexGrow: 1, p: 3, maxWidth: isMobile ? '100vw' : 'calc(100vw - 250px)' }}>
+      <Box component="main" sx={{ flexGrow: 1, minWidth: 0, p: { xs: 2, md: 3 } }}>
         <Toolbar />
         <Outlet />
       </Box>
