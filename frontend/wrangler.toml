@@ -1,0 +1,6 @@
+# Cloudflare Pages deployment config
+name = "pip-beisser"
+compatibility_date = "2026-04-08"
+
+[site]
+bucket = "./dist"

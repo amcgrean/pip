@@ -12,3 +12,5 @@ backend/test.db
 backend/data_storage/
 data_storage/
 frontend/dist/
+.env.production
+migrate_to_prod.py

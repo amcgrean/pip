@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from app.models.product import Product
 from app.models.product_alias import ProductAlias
 from app.models.product_attachment import ProductAttachment
+from app.models.product_guide import ProductGuideItem
 from app.models.vendor_product_mapping import VendorProductMapping
 from app.schemas.domain import ProductCreate, ProductUpdate
 
@@ -31,10 +32,13 @@ def list_products(
     has_attachments: bool | None,
     sort_by: str,
     sort_dir: str,
+    guide_id: int | None = None,
 ):
     query = db.query(Product.id)
     if vendor_id:
         query = query.filter(Product.mappings.any(VendorProductMapping.vendor_id == vendor_id))
+    if guide_id:
+        query = query.filter(Product.guide_items.any(ProductGuideItem.guide_id == guide_id))
     search_term = (search or "").strip()
     if search_term:
         term = f"%{search_term}%"

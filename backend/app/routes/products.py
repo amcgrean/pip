@@ -36,6 +36,7 @@ def list_products(
     product_type: str | None = None,
     status_filter: str | None = Query(default=None, alias="status"),
     has_attachments: bool | None = None,
+    guide_id: int | None = None,
     sort_by: str = "normalized_name",
     sort_dir: str = "asc",
     db: Session = Depends(get_db),
@@ -54,6 +55,7 @@ def list_products(
         has_attachments,
         sort_by,
         sort_dir,
+        guide_id=guide_id,
     )
     return ProductListResponse(items=[ProductOut.model_validate(p) for p in items], meta=PaginationMeta(page=page, page_size=page_size, total=total))
 

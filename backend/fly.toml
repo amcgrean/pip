@@ -1,0 +1,28 @@
+# Fly.io deployment configuration for PIP backend
+app = "beisser-pip-api"
+primary_region = "iad"  # us-east (close to Supabase us-east-1)
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  ENVIRONMENT = "production"
+  API_V1_PREFIX = "/api/v1"
+  LOG_LEVEL = "INFO"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 250
+    soft_limit = 200
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

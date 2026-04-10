@@ -6,11 +6,11 @@ from app.models.mixins import TimestampMixin
 
 
 class ProductImage(TimestampMixin, Base):
-    __tablename__ = "product_images"
-    __table_args__ = (UniqueConstraint("product_id", "storage_path", name="uq_product_image_product_path"),)
+    __tablename__ = "pip_product_images"
+    __table_args__ = (UniqueConstraint("product_id", "storage_path", name="uq_pip_product_image_path"),)
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True, nullable=False)
+    product_id: Mapped[int] = mapped_column(ForeignKey("pip_products.id", ondelete="CASCADE"), index=True, nullable=False)
     storage_path: Mapped[str] = mapped_column(String(500), nullable=False)
     image_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
     alt_text: Mapped[str | None] = mapped_column(String(255), nullable=True)

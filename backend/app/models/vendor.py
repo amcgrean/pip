@@ -6,7 +6,7 @@ from app.models.mixins import TimestampMixin
 
 
 class Vendor(TimestampMixin, Base):
-    __tablename__ = "vendors"
+    __tablename__ = "pip_vendors"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     vendor_code: Mapped[str] = mapped_column(String(50), unique=True, index=True, nullable=False)

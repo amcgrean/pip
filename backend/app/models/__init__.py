@@ -3,6 +3,7 @@ from app.models.product import Product
 from app.models.product_alias import ProductAlias
 from app.models.product_attachment import ProductAttachment
 from app.models.product_document import ProductDocument
+from app.models.product_guide import ProductGuide, ProductGuideItem
 from app.models.product_image import ProductImage
 from app.models.product_note import ProductNote
 from app.models.user import User
@@ -16,6 +17,8 @@ __all__ = [
     "ProductAlias",
     "ProductImage",
     "ProductDocument",
+    "ProductGuide",
+    "ProductGuideItem",
     "VendorProductMapping",
     "ProductAttachment",
     "ProductNote",

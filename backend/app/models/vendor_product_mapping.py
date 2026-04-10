@@ -6,15 +6,15 @@ from app.models.mixins import TimestampMixin
 
 
 class VendorProductMapping(TimestampMixin, Base):
-    __tablename__ = "vendor_product_mappings"
+    __tablename__ = "pip_vendor_product_mappings"
     __table_args__ = (
-        UniqueConstraint("vendor_id", "product_id", "vendor_sku", name="uq_vendor_product_sku"),
-        Index("ix_vendor_product_mappings_vendor_id_vendor_sku", "vendor_id", "vendor_sku"),
+        UniqueConstraint("vendor_id", "product_id", "vendor_sku", name="uq_pip_vendor_product_sku"),
+        Index("ix_pip_vpm_vendor_id_vendor_sku", "vendor_id", "vendor_sku"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
-    vendor_id: Mapped[int] = mapped_column(ForeignKey("vendors.id", ondelete="CASCADE"), index=True, nullable=False)
-    product_id: Mapped[int] = mapped_column(ForeignKey("products.id", ondelete="CASCADE"), index=True, nullable=False)
+    vendor_id: Mapped[int] = mapped_column(ForeignKey("pip_vendors.id", ondelete="CASCADE"), index=True, nullable=False)
+    product_id: Mapped[int] = mapped_column(ForeignKey("pip_products.id", ondelete="CASCADE"), index=True, nullable=False)
     vendor_sku: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     vendor_description: Mapped[str | None] = mapped_column(String(255), nullable=True)
     vendor_uom: Mapped[str | None] = mapped_column(String(50), nullable=True)

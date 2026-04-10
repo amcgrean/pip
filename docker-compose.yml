@@ -18,7 +18,7 @@ services:
   backend:
     build:
       context: ./backend
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload --timeout-keep-alive 600
     env_file: .env
     environment:
       APP_VERSION: ${APP_VERSION:-local-dev}

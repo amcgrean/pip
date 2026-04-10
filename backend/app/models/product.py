@@ -6,7 +6,7 @@ from app.models.mixins import TimestampMixin
 
 
 class Product(TimestampMixin, Base):
-    __tablename__ = "products"
+    __tablename__ = "pip_products"
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     internal_sku: Mapped[str] = mapped_column(String(80), unique=True, index=True, nullable=False)
@@ -50,3 +50,4 @@ class Product(TimestampMixin, Base):
     aliases = relationship("ProductAlias", back_populates="product", cascade="all,delete")
     images = relationship("ProductImage", back_populates="product", cascade="all,delete")
     documents = relationship("ProductDocument", back_populates="product", cascade="all,delete")
+    guide_items = relationship("ProductGuideItem", back_populates="product", cascade="all,delete")

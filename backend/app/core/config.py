@@ -19,11 +19,25 @@ class Settings(BaseSettings):
 
     database_url: str = "postgresql+psycopg2://beisser:beisser@db:5432/beisser_ops"
 
+    # Separate DB params (optional — used when DATABASE_URL has special chars)
+    db_host: str = ""
+    db_port: int = 5432
+    db_user: str = ""
+    db_password: str = ""
+    db_name: str = ""
+
     cors_allowed_origins: str = "http://localhost:5173"
     local_storage_dir: str = "./data_storage"
     max_attachment_size_bytes: int = 10 * 1024 * 1024
-    max_import_size_bytes: int = 5 * 1024 * 1024
+    max_import_size_bytes: int = 20 * 1024 * 1024
     allowed_attachment_extensions: str = ".pdf,.png,.jpg,.jpeg,.csv,.txt,.doc,.docx,.xlsx"
+
+    # Cloudflare R2 (optional — if set, images stored in R2 instead of local disk)
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket_name: str = "pip-images"
+    r2_public_url: str = ""  # e.g. https://pip-images.beisser-internal.com
 
     seed_admin_email: str = "admin@beisser-internal.com"
     seed_admin_password: str = "ChangeMe123!"
@@ -32,6 +46,10 @@ class Settings(BaseSettings):
     @property
     def is_production(self) -> bool:
         return self.environment.lower() == "production"
+
+    @property
+    def r2_enabled(self) -> bool:
+        return bool(self.r2_access_key_id and self.r2_secret_access_key)
 
     @property
     def cors_origins_list(self) -> list[str]:

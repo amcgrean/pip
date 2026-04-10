@@ -270,6 +270,22 @@ class ImportJobListResponse(BaseModel):
     meta: PaginationMeta
 
 
+class ScraperSyncRequest(BaseModel):
+    records: list[dict] = Field(..., min_length=1)
+
+
+class ScraperSyncResponse(BaseModel):
+    id: int
+    total_rows: int
+    products_inserted: int
+    products_updated: int
+    matched_to_stock: int
+    images_inserted: int
+    images_updated: int
+    errored: int
+    status: str
+
+
 class ProductDetailOut(BaseModel):
     product: ProductOut
     mappings: list[VendorMappingOut]
@@ -323,3 +339,78 @@ class DashboardSummary(BaseModel):
     total_vendors: int
     products_with_attachments: int
     recent_import_jobs: list[ImportJobOut]
+
+
+# ---------------------------------------------------------------------------
+# Product Guide schemas
+# ---------------------------------------------------------------------------
+
+class GuideItemCreate(BaseModel):
+    product_id: int
+    section_name: str | None = None
+    sort_order: int = 0
+    override_description: str | None = None
+
+
+class GuideItemOut(BaseModel):
+    id: int
+    product_id: int
+    section_name: str | None = None
+    sort_order: int = 0
+    override_description: str | None = None
+    # Flattened product fields for display
+    internal_sku: str = ""
+    normalized_name: str = ""
+    display_name: str | None = None
+    thickness: str | None = None
+    width: str | None = None
+    length: str | None = None
+    species_or_material: str | None = None
+    profile: str | None = None
+    finish: str | None = None
+    category_major: str | None = None
+    category_minor: str | None = None
+    primary_image_path: str | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class GuideCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=255)
+    description: str | None = None
+
+
+class GuideUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    status: str | None = None
+    section_order: list[str] | None = None
+
+
+class GuideOut(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+    status: str = "draft"
+    section_order: list[str] = []
+    item_count: int = 0
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    class Config:
+        from_attributes = True
+
+
+class GuideDetailOut(BaseModel):
+    guide: GuideOut
+    items: list[GuideItemOut]
+
+
+class GuideListResponse(BaseModel):
+    items: list[GuideOut]
+    meta: PaginationMeta
+
+
+class GuideBulkReorderRequest(BaseModel):
+    items: list[dict]  # [{"id": 1, "sort_order": 0, "section_name": "Casing"}, ...]
